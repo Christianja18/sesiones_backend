@@ -13,14 +13,7 @@ public interface SesionRepository extends JpaRepository<Sesion, Integer> {
         "unidad",
         "unidad.grado",
         "unidad.grado.nivel",
-        "unidad.area",
-        "competencias",
-        "capacidades",
-        "desempenos",
-        "actividades",
-        "criteriosEvaluacion",
-        "evidencias",
-        "instrumentosEvaluacion"
+        "unidad.area"
     })
     Optional<Sesion> findDetailedById(Integer id);
 }
