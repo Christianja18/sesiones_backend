@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class TextoReferenciaResponse {
 
-    private Long id;
+    private Integer id;
     private String descripcion;
 }
+

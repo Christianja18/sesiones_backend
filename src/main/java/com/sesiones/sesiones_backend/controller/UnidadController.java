@@ -36,7 +36,8 @@ public class UnidadController {
 
     @GetMapping("/{unidadId}")
     @Operation(summary = "Obtener unidad por id")
-    public ResponseEntity<UnidadResponse> findById(@PathVariable Long unidadId) {
+    public ResponseEntity<UnidadResponse> findById(@PathVariable Integer unidadId) {
         return ResponseEntity.ok(obtenerUnidadService.execute(unidadId));
     }
 }
+

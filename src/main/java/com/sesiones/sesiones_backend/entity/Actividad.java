@@ -21,7 +21,7 @@ public class Actividad extends BaseEntity {
     @JoinColumn(name = "sesion_id", nullable = false)
     private Sesion sesion;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "ENUM('inicio','desarrollo','cierre')")
     private ActividadTipo tipo;
 
     @Column(nullable = false, columnDefinition = "TEXT")

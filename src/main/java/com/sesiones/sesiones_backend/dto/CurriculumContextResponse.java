@@ -14,13 +14,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CurriculumContextResponse {
 
-    private Long nivelId;
+    private Integer nivelId;
     private String nivelNombre;
-    private Long gradoId;
+    private Integer gradoId;
     private String gradoNombre;
-    private Long areaId;
+    private Integer areaId;
     private String areaNombre;
-    private Long competenciaId;
+    private Integer competenciaId;
     private String competenciaDescripcion;
 
     @Builder.Default
@@ -29,3 +29,4 @@ public class CurriculumContextResponse {
     @Builder.Default
     private List<TextoReferenciaResponse> desempenos = new ArrayList<>();
 }
+

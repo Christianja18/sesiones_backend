@@ -7,8 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.Unidad;
 
-public interface UnidadRepository extends JpaRepository<Unidad, Long> {
+public interface UnidadRepository extends JpaRepository<Unidad, Integer> {
 
     @EntityGraph(attributePaths = {"grado", "grado.nivel", "area", "docente", "docente.institucion"})
-    Optional<Unidad> findDetailedById(Long id);
+    Optional<Unidad> findDetailedById(Integer id);
 }
+

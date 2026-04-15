@@ -35,7 +35,7 @@ class CrearDocenteServiceTest {
     @Test
     void shouldRejectDuplicatedEmail() {
         CreateDocenteRequest request = CreateDocenteRequest.builder()
-            .nombre("Ana PÃ©rez")
+            .nombre("Ana PÃƒÆ’Ã‚Â©rez")
             .email("ana@correo.com")
             .institucion("IE 001")
             .build();
@@ -48,7 +48,7 @@ class CrearDocenteServiceTest {
     @Test
     void shouldCreateTeacher() {
         CreateDocenteRequest request = CreateDocenteRequest.builder()
-            .nombre("Ana PÃ©rez")
+            .nombre("Ana PÃƒÆ’Ã‚Â©rez")
             .email("ANA@correo.com")
             .institucion("IE 001")
             .build();
@@ -57,20 +57,20 @@ class CrearDocenteServiceTest {
         when(institucionRepository.findByNombreIgnoreCase("IE 001")).thenReturn(java.util.Optional.empty());
         when(institucionRepository.save(any(Institucion.class))).thenAnswer(invocation -> {
             Institucion institucion = invocation.getArgument(0);
-            institucion.setId(3L);
+            institucion.setId(3);
             return institucion;
         });
         when(docenteRepository.save(any(Docente.class))).thenAnswer(invocation -> {
             Docente docente = invocation.getArgument(0);
-            docente.setId(10L);
+            docente.setId(10);
             return docente;
         });
 
         DocenteResponse response = crearDocenteService.execute(request);
 
-        assertEquals(10L, response.getId());
+        assertEquals(10, response.getId());
         assertEquals("ana@correo.com", response.getEmail());
-        assertEquals(3L, response.getInstitucionId());
+        assertEquals(3, response.getInstitucionId());
         assertEquals("IE 001", response.getInstitucion());
         verify(docenteRepository).save(any(Docente.class));
     }

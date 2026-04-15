@@ -44,75 +44,76 @@ public class ReferenceResolver {
     private final DocumentoCurriculoRepository documentoCurriculoRepository;
     private final UnidadRepository unidadRepository;
 
-    public NivelEducativo findNivel(Long nivelId) {
+    public NivelEducativo findNivel(Integer nivelId) {
         return nivelEducativoRepository.findById(nivelId)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el nivel educativo con id " + nivelId));
     }
 
-    public Grado findGrado(Long gradoId) {
+    public Grado findGrado(Integer gradoId) {
         return gradoRepository.findById(gradoId)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el grado con id " + gradoId));
     }
 
-    public Grado findGradoByNivel(Long gradoId, Long nivelId) {
+    public Grado findGradoByNivel(Integer gradoId, Integer nivelId) {
         return gradoRepository.findByIdAndNivelId(gradoId, nivelId)
             .orElseThrow(() -> new ResourceNotFoundException(
                 "No existe el grado con id " + gradoId + " para el nivel educativo " + nivelId
             ));
     }
 
-    public Area findArea(Long areaId) {
+    public Area findArea(Integer areaId) {
         return areaRepository.findById(areaId)
-            .orElseThrow(() -> new ResourceNotFoundException("No existe el Ã¡rea con id " + areaId));
+            .orElseThrow(() -> new ResourceNotFoundException("No existe el ÃƒÂ¡rea con id " + areaId));
     }
 
-    public Competencia findCompetenciaByArea(Long competenciaId, Long areaId) {
+    public Competencia findCompetenciaByArea(Integer competenciaId, Integer areaId) {
         return competenciaRepository.findByIdAndAreaId(competenciaId, areaId)
             .orElseThrow(() -> new ResourceNotFoundException(
-                "No existe la competencia con id " + competenciaId + " para el Ã¡rea " + areaId
+                "No existe la competencia con id " + competenciaId + " para el ÃƒÂ¡rea " + areaId
             ));
     }
 
-    public Docente findDocente(Long docenteId) {
+    public Docente findDocente(Integer docenteId) {
         return docenteRepository.findById(docenteId)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el docente con id " + docenteId));
     }
 
-    public Institucion findInstitucion(Long institucionId) {
+    public Institucion findInstitucion(Integer institucionId) {
         return institucionRepository.findById(institucionId)
-            .orElseThrow(() -> new ResourceNotFoundException("No existe la instituciÃ³n con id " + institucionId));
+            .orElseThrow(() -> new ResourceNotFoundException("No existe la instituciÃƒÂ³n con id " + institucionId));
     }
 
-    public Unidad findUnidad(Long unidadId) {
+    public Unidad findUnidad(Integer unidadId) {
         return unidadRepository.findById(unidadId)
             .orElseThrow(() -> new ResourceNotFoundException("No existe la unidad con id " + unidadId));
     }
 
-    public DocumentoCurriculo findDocumentoCurriculo(Long documentoCurriculoId) {
+    public DocumentoCurriculo findDocumentoCurriculo(Integer documentoCurriculoId) {
         return documentoCurriculoRepository.findById(documentoCurriculoId)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el documento curricular con id " + documentoCurriculoId));
     }
 
-    public List<Competencia> findCompetencias(List<Long> ids) {
+    public List<Competencia> findCompetencias(List<Integer> ids) {
         return validateCollection(ids, competenciaRepository::findByIdIn, "competencia");
     }
 
-    public List<Capacidad> findCapacidades(List<Long> ids) {
+    public List<Capacidad> findCapacidades(List<Integer> ids) {
         return validateCollection(ids, capacidadRepository::findByIdIn, "capacidad");
     }
 
-    private <T> List<T> validateCollection(List<Long> ids, Function<List<Long>, List<T>> resolver, String label) {
+    private <T> List<T> validateCollection(List<Integer> ids, Function<List<Integer>, List<T>> resolver, String label) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
 
-        Set<Long> uniqueIds = new LinkedHashSet<>(ids);
-        List<Long> normalizedIds = new ArrayList<>(uniqueIds);
+        Set<Integer> uniqueIds = new LinkedHashSet<>(ids);
+        List<Integer> normalizedIds = new ArrayList<>(uniqueIds);
         List<T> entities = resolver.apply(normalizedIds);
         if (entities.size() != normalizedIds.size()) {
-            throw new ResourceNotFoundException("Uno o mÃ¡s registros de " + label + " no existen");
+            throw new ResourceNotFoundException("Uno o mÃƒÂ¡s registros de " + label + " no existen");
         }
         return entities;
     }
 }
+
 

@@ -26,7 +26,7 @@ public class ActualizarProcesamientoDocumentoCurriculoService {
     private final SessionResponseMapper sessionResponseMapper;
 
     @Transactional
-    public DocumentoCurriculoResponse execute(Long documentoCurriculoId, UpdateDocumentoCurriculoProcesamientoRequest request) {
+    public DocumentoCurriculoResponse execute(Integer documentoCurriculoId, UpdateDocumentoCurriculoProcesamientoRequest request) {
         DocumentoCurriculo documentoCurriculo = referenceResolver.findDocumentoCurriculo(documentoCurriculoId);
         DocumentoCurriculoProcesamiento procesamiento = documentoCurriculoProcesamientoRepository
             .findByDocumentoCurriculoId(documentoCurriculoId)
@@ -51,4 +51,5 @@ public class ActualizarProcesamientoDocumentoCurriculoService {
         return sessionResponseMapper.toDocumentoCurriculoResponse(savedDocument);
     }
 }
+
 

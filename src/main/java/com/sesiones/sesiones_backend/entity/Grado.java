@@ -19,6 +19,6 @@ public class Grado extends BaseEntity {
     @JoinColumn(name = "nivel_id", nullable = false)
     private NivelEducativo nivel;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 50)
     private String nombre;
 }

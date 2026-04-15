@@ -6,9 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.Capacidad;
 
-public interface CapacidadRepository extends JpaRepository<Capacidad, Long> {
+public interface CapacidadRepository extends JpaRepository<Capacidad, Integer> {
 
-    List<Capacidad> findByCompetenciaIdOrderByIdAsc(Long competenciaId);
+    List<Capacidad> findByCompetenciaIdOrderByIdAsc(Integer competenciaId);
 
-    List<Capacidad> findByIdIn(List<Long> ids);
+    List<Capacidad> findByIdIn(List<Integer> ids);
 }
+

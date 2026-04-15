@@ -17,7 +17,7 @@ import lombok.Setter;
 @Table(name = "unidad")
 public class Unidad extends CreationAuditableEntity {
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String titulo;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

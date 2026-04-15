@@ -21,7 +21,7 @@ public class InstrumentoEvaluacion extends BaseEntity {
     @JoinColumn(name = "sesion_id", nullable = false)
     private Sesion sesion;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "ENUM('rubrica','lista_cotejo')")
     private InstrumentoTipo tipo;
 
     @Column(name = "contenido_json", nullable = false, columnDefinition = "json")

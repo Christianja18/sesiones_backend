@@ -13,15 +13,16 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DocumentoCurriculoResponse {
 
-    private Long id;
+    private Integer id;
     private String nombreArchivo;
     private String rutaArchivo;
-    private Long areaId;
+    private Integer areaId;
     private String areaNombre;
-    private Long gradoId;
+    private Integer gradoId;
     private String gradoNombre;
-    private Long nivelId;
+    private Integer nivelId;
     private String nivelNombre;
     private LocalDateTime fechaSubida;
     private DocumentoCurriculoProcesamientoResponse procesamiento;
 }
+

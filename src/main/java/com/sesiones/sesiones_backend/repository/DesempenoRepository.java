@@ -6,9 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.Desempeno;
 
-public interface DesempenoRepository extends JpaRepository<Desempeno, Long> {
+public interface DesempenoRepository extends JpaRepository<Desempeno, Integer> {
 
-    List<Desempeno> findByGradoIdAndCompetenciaIdOrderByIdAsc(Long gradoId, Long competenciaId);
+    List<Desempeno> findByGradoIdAndCompetenciaIdOrderByIdAsc(Integer gradoId, Integer competenciaId);
 
-    List<Desempeno> findByIdIn(List<Long> ids);
+    List<Desempeno> findByIdIn(List<Integer> ids);
 }
+

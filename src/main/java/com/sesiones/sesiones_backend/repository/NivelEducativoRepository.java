@@ -6,7 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
 
-public interface NivelEducativoRepository extends JpaRepository<NivelEducativo, Long> {
+public interface NivelEducativoRepository extends JpaRepository<NivelEducativo, Integer> {
 
     List<NivelEducativo> findAllByOrderByNombreAsc();
 }
+

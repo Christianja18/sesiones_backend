@@ -1,8 +1,10 @@
 package com.sesiones.sesiones_backend.service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -16,7 +18,7 @@ public class RecursiveActivityAssembler {
 
     public List<Actividad> assemble(Sesion sesion, ActividadesSesionDto actividadesDto) {
         List<Actividad> actividades = new ArrayList<>();
-        List<ActivitySeed> seeds = List.of(
+        List<ActivitySeed> seeds = Arrays.asList(
             new ActivitySeed(ActividadTipo.INICIO, safeList(actividadesDto.getInicio())),
             new ActivitySeed(ActividadTipo.DESARROLLO, safeList(actividadesDto.getDesarrollo())),
             new ActivitySeed(ActividadTipo.CIERRE, safeList(actividadesDto.getCierre()))
@@ -37,7 +39,7 @@ public class RecursiveActivityAssembler {
         }
 
         ActivitySeed seed = seeds.get(groupIndex);
-        int updatedOrder = appendItemsRecursively(target, seed.tipo(), seed.descripciones(), 0, nextOrder, sesion);
+        int updatedOrder = appendItemsRecursively(target, seed.getTipo(), seed.getDescripciones(), 0, nextOrder, sesion);
         return appendGroupRecursively(target, seeds, groupIndex + 1, updatedOrder, sesion);
     }
 
@@ -69,10 +71,26 @@ public class RecursiveActivityAssembler {
         }
         return items.stream()
             .filter(item -> item != null && !item.isBlank())
-            .toList();
+            .collect(Collectors.toList());
     }
 
-    private record ActivitySeed(ActividadTipo tipo, List<String> descripciones) {
+    private static final class ActivitySeed {
+
+        private final ActividadTipo tipo;
+        private final List<String> descripciones;
+
+        private ActivitySeed(ActividadTipo tipo, List<String> descripciones) {
+            this.tipo = tipo;
+            this.descripciones = descripciones;
+        }
+
+        private ActividadTipo getTipo() {
+            return tipo;
+        }
+
+        private List<String> getDescripciones() {
+            return descripciones;
+        }
     }
 }
 

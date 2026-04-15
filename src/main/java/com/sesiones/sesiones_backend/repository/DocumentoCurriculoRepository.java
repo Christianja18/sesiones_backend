@@ -7,8 +7,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 
-public interface DocumentoCurriculoRepository extends JpaRepository<DocumentoCurriculo, Long> {
+public interface DocumentoCurriculoRepository extends JpaRepository<DocumentoCurriculo, Integer> {
 
     @EntityGraph(attributePaths = {"area", "grado", "grado.nivel", "procesamiento"})
-    Optional<DocumentoCurriculo> findDetailedById(Long id);
+    Optional<DocumentoCurriculo> findDetailedById(Integer id);
 }
+

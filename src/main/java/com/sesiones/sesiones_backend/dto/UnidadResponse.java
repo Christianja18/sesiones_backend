@@ -14,20 +14,21 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UnidadResponse {
 
-    private Long id;
+    private Integer id;
     private String titulo;
-    private Long gradoId;
+    private Integer gradoId;
     private String gradoNombre;
-    private Long nivelId;
+    private Integer nivelId;
     private String nivelNombre;
-    private Long areaId;
+    private Integer areaId;
     private String areaNombre;
-    private Long docenteId;
+    private Integer docenteId;
     private String docenteNombre;
-    private Long institucionId;
+    private Integer institucionId;
     private String institucion;
     private LocalDate fechaInicio;
     private LocalDate fechaFin;
     private String contexto;
     private LocalDateTime createdAt;
 }
+

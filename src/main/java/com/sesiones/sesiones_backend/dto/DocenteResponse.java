@@ -11,9 +11,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DocenteResponse {
 
-    private Long id;
+    private Integer id;
     private String nombre;
     private String email;
-    private Long institucionId;
+    private Integer institucionId;
     private String institucion;
 }
+

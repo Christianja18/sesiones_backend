@@ -18,7 +18,8 @@ public class CreateDocumentoCurriculoRequest {
     @NotBlank
     private String rutaArchivo;
 
-    private Long areaId;
+    private Integer areaId;
 
-    private Long gradoId;
+    private Integer gradoId;
 }
+

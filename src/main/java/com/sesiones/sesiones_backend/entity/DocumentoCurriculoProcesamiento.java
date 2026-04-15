@@ -26,7 +26,7 @@ public class DocumentoCurriculoProcesamiento extends BaseEntity {
     @JoinColumn(name = "documento_curriculo_id", nullable = false)
     private DocumentoCurriculo documentoCurriculo;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 30)
     private DocumentoProcesamientoEstado estado;
 
     @Column(columnDefinition = "TEXT")

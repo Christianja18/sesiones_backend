@@ -45,52 +45,52 @@ class GenerarSesionServiceTest {
     @Test
     void shouldGeneratePreviewUsingResolvedCurriculum() {
         GenerateSesionRequest request = GenerateSesionRequest.builder()
-            .nivelId(1L)
-            .gradoId(2L)
-            .areaId(3L)
-            .competenciaId(4L)
+            .nivelId(1)
+            .gradoId(2)
+            .areaId(3)
+            .competenciaId(4)
             .tema("Fracciones")
             .contexto("Aula multigrado")
             .duracionMinutos(90)
             .build();
 
         NivelEducativo nivel = new NivelEducativo();
-        nivel.setId(1L);
+        nivel.setId(1);
 
         Grado grado = new Grado();
-        grado.setId(2L);
+        grado.setId(2);
         grado.setNivel(nivel);
         grado.setNombre("4to");
 
         Area area = new Area();
-        area.setId(3L);
-        area.setNombre("MatemÃ¡tica");
+        area.setId(3);
+        area.setNombre("MatemÃƒÆ’Ã‚Â¡tica");
 
         Competencia competencia = new Competencia();
-        competencia.setId(4L);
+        competencia.setId(4);
         competencia.setArea(area);
         competencia.setDescripcion("Resuelve problemas de cantidad");
 
         Capacidad capacidad = new Capacidad();
-        capacidad.setId(5L);
+        capacidad.setId(5);
         capacidad.setCompetencia(competencia);
-        capacidad.setDescripcion("Traduce cantidades a expresiones numÃ©ricas");
+        capacidad.setDescripcion("Traduce cantidades a expresiones numÃƒÆ’Ã‚Â©ricas");
 
-        SesionResponse expected = SesionResponse.builder().titulo("SesiÃ³n generada").build();
+        SesionResponse expected = SesionResponse.builder().titulo("SesiÃƒÆ’Ã‚Â³n generada").build();
 
-        when(referenceResolver.findNivel(1L)).thenReturn(nivel);
-        when(referenceResolver.findGradoByNivel(2L, 1L)).thenReturn(grado);
-        when(referenceResolver.findArea(3L)).thenReturn(area);
-        when(referenceResolver.findCompetenciaByArea(4L, 3L)).thenReturn(competencia);
-        when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4L)).thenReturn(List.of(capacidad));
-        when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2L, 4L)).thenReturn(List.of());
+        when(referenceResolver.findNivel(1)).thenReturn(nivel);
+        when(referenceResolver.findGradoByNivel(2, 1)).thenReturn(grado);
+        when(referenceResolver.findArea(3)).thenReturn(area);
+        when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
+        when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
+        when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(List.of());
         when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), List.of()))
             .thenReturn(expected);
 
         SesionResponse response = generarSesionService.execute(request);
 
         assertSame(expected, response);
-        verify(referenceResolver).findGradoByNivel(2L, 1L);
+        verify(referenceResolver).findGradoByNivel(2, 1);
         verify(templateSessionGeneratorService).generate(request, grado, area, competencia, List.of(capacidad), List.of());
     }
 }

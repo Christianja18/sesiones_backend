@@ -13,10 +13,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class DocumentoCurriculoProcesamientoResponse {
 
-    private Long id;
+    private Integer id;
     private String estado;
     private String observacion;
     private LocalDateTime fechaUltimoProceso;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

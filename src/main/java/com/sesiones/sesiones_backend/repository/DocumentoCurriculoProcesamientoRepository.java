@@ -6,7 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculoProcesamiento;
 
-public interface DocumentoCurriculoProcesamientoRepository extends JpaRepository<DocumentoCurriculoProcesamiento, Long> {
+public interface DocumentoCurriculoProcesamientoRepository extends JpaRepository<DocumentoCurriculoProcesamiento, Integer> {
 
-    Optional<DocumentoCurriculoProcesamiento> findByDocumentoCurriculoId(Long documentoCurriculoId);
+    Optional<DocumentoCurriculoProcesamiento> findByDocumentoCurriculoId(Integer documentoCurriculoId);
 }
+

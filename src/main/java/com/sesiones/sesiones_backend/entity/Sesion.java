@@ -27,7 +27,7 @@ public class Sesion extends CreationAuditableEntity {
     @JoinColumn(name = "unidad_id", nullable = false)
     private Unidad unidad;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String titulo;
 
     @Column(nullable = false, columnDefinition = "TEXT")

@@ -15,10 +15,10 @@ import lombok.Setter;
 @Table(name = "docente")
 public class Docente extends CreationAuditableEntity {
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String nombre;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

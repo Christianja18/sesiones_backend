@@ -4,7 +4,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.Docente;
 
-public interface DocenteRepository extends JpaRepository<Docente, Long> {
+public interface DocenteRepository extends JpaRepository<Docente, Integer> {
 
     boolean existsByEmailIgnoreCase(String email);
 }
+

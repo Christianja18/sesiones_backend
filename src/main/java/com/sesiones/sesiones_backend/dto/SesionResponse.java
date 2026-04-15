@@ -15,8 +15,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SesionResponse {
 
-    private Long id;
-    private Long unidadId;
+    private Integer id;
+    private Integer unidadId;
     private String unidadTitulo;
     private LocalDate fecha;
     private String titulo;
@@ -44,3 +44,4 @@ public class SesionResponse {
 
     private InstrumentoEvaluacionDto instrumentoEvaluacion;
 }
+

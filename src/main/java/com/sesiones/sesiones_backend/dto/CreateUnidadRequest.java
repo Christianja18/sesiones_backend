@@ -19,13 +19,13 @@ public class CreateUnidadRequest {
     private String titulo;
 
     @NotNull
-    private Long gradoId;
+    private Integer gradoId;
 
     @NotNull
-    private Long areaId;
+    private Integer areaId;
 
     @NotNull
-    private Long docenteId;
+    private Integer docenteId;
 
     @NotNull
     private LocalDate fechaInicio;
@@ -36,3 +36,4 @@ public class CreateUnidadRequest {
     @NotBlank
     private String contexto;
 }
+

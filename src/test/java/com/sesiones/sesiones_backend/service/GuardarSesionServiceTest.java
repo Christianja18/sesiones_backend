@@ -65,17 +65,17 @@ class GuardarSesionServiceTest {
     @Test
     void shouldPersistActivitiesWithRecursiveOrder() {
         SaveSesionRequest request = SaveSesionRequest.builder()
-            .unidadId(7L)
+            .unidadId(7)
             .fecha(LocalDate.of(2026, 4, 14))
-            .titulo("SesiÃ³n sobre fracciones")
+            .titulo("SesiÃƒÆ’Ã‚Â³n sobre fracciones")
             .proposito("Comprender equivalencias")
             .duracionMinutos(90)
-            .competenciaIds(List.of(10L))
-            .capacidadIds(List.of(20L))
+            .competenciaIds(List.of(10))
+            .capacidadIds(List.of(20))
             .actividades(ActividadesSesionDto.builder()
                 .inicio(List.of("Recordar fracciones"))
                 .desarrollo(List.of("Resolver ejercicios", "Socializar estrategias"))
-                .cierre(List.of("ReflexiÃ³n final"))
+                .cierre(List.of("ReflexiÃƒÆ’Ã‚Â³n final"))
                 .build())
             .criteriosEvaluacion(List.of("Explica procedimientos"))
             .evidencias(List.of("Ficha resuelta"))
@@ -86,52 +86,52 @@ class GuardarSesionServiceTest {
             .build();
 
         NivelEducativo nivel = new NivelEducativo();
-        nivel.setId(1L);
+        nivel.setId(1);
         nivel.setNombre("Primaria");
 
         Grado grado = new Grado();
-        grado.setId(2L);
+        grado.setId(2);
         grado.setNombre("4to");
         grado.setNivel(nivel);
 
         Unidad unidad = new Unidad();
-        unidad.setId(7L);
-        unidad.setTitulo("Unidad de matemÃ¡tica");
+        unidad.setId(7);
+        unidad.setTitulo("Unidad de matemÃƒÆ’Ã‚Â¡tica");
         unidad.setGrado(grado);
         Area area = new Area();
-        area.setId(9L);
-        area.setNombre("MatemÃƒÂ¡tica");
+        area.setId(9);
+        area.setNombre("MatemÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡tica");
         unidad.setArea(area);
 
         Competencia competencia = new Competencia();
-        competencia.setId(10L);
+        competencia.setId(10);
         competencia.setDescripcion("Resuelve problemas de cantidad");
         competencia.setArea(area);
 
         Capacidad capacidad = new Capacidad();
-        capacidad.setId(20L);
+        capacidad.setId(20);
         capacidad.setDescripcion("Usa estrategias");
         capacidad.setCompetencia(competencia);
 
         AtomicReference<Sesion> savedReference = new AtomicReference<>();
 
-        when(referenceResolver.findUnidad(7L)).thenReturn(unidad);
-        when(referenceResolver.findCompetencias(List.of(10L))).thenReturn(List.of(competencia));
-        when(referenceResolver.findCapacidades(List.of(20L))).thenReturn(List.of(capacidad));
+        when(referenceResolver.findUnidad(7)).thenReturn(unidad);
+        when(referenceResolver.findCompetencias(List.of(10))).thenReturn(List.of(competencia));
+        when(referenceResolver.findCapacidades(List.of(20))).thenReturn(List.of(capacidad));
         when(sesionRepository.save(any(Sesion.class))).thenAnswer(invocation -> {
             Sesion sesion = invocation.getArgument(0);
-            sesion.setId(55L);
+            sesion.setId(55);
             savedReference.set(sesion);
             return sesion;
         });
-        when(sesionRepository.findDetailedById(55L)).thenAnswer(invocation -> Optional.of(savedReference.get()));
+        when(sesionRepository.findDetailedById(55)).thenAnswer(invocation -> Optional.of(savedReference.get()));
 
         SesionResponse response = guardarSesionService.execute(request);
 
-        assertEquals(55L, response.getId());
+        assertEquals(55, response.getId());
         assertEquals(List.of("Recordar fracciones"), response.getActividades().getInicio());
         assertEquals(List.of("Resolver ejercicios", "Socializar estrategias"), response.getActividades().getDesarrollo());
-        assertEquals(List.of("ReflexiÃ³n final"), response.getActividades().getCierre());
+        assertEquals(List.of("ReflexiÃƒÆ’Ã‚Â³n final"), response.getActividades().getCierre());
         assertEquals(List.of(1, 2, 3, 4), savedReference.get().getActividades().stream().map(item -> item.getOrden()).toList());
         verify(sesionRepository).save(any(Sesion.class));
     }

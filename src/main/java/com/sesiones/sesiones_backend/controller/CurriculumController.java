@@ -24,11 +24,12 @@ public class CurriculumController {
     @GetMapping("/contexto")
     @Operation(summary = "Obtener contexto curricular por nivel, grado, area y competencia")
     public ResponseEntity<CurriculumContextResponse> getContext(
-        @RequestParam Long nivelId,
-        @RequestParam Long gradoId,
-        @RequestParam Long areaId,
-        @RequestParam Long competenciaId
+        @RequestParam Integer nivelId,
+        @RequestParam Integer gradoId,
+        @RequestParam Integer areaId,
+        @RequestParam Integer competenciaId
     ) {
         return ResponseEntity.ok(obtenerContextoCurricularService.execute(nivelId, gradoId, areaId, competenciaId));
     }
 }
+

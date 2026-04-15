@@ -12,6 +12,6 @@ import lombok.Setter;
 @Table(name = "nivel_educativo")
 public class NivelEducativo extends BaseEntity {
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String nombre;
 }

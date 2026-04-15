@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 public class SaveSesionRequest {
 
     @NotNull
-    private Long unidadId;
+    private Integer unidadId;
 
     @NotNull
     private LocalDate fecha;
@@ -36,13 +36,13 @@ public class SaveSesionRequest {
     private boolean generadoPorIa;
 
     @Builder.Default
-    private List<Long> competenciaIds = new ArrayList<>();
+    private List<Integer> competenciaIds = new ArrayList<>();
 
     @Builder.Default
-    private List<Long> capacidadIds = new ArrayList<>();
+    private List<Integer> capacidadIds = new ArrayList<>();
 
     @Builder.Default
-    private List<Long> desempenoIds = new ArrayList<>();
+    private List<Integer> desempenoIds = new ArrayList<>();
 
     @Valid
     @NotNull
@@ -58,3 +58,4 @@ public class SaveSesionRequest {
     @NotNull
     private InstrumentoEvaluacionDto instrumentoEvaluacion;
 }
+

@@ -40,7 +40,7 @@ public class GuardarSesionService {
     @Transactional
     public SesionResponse execute(SaveSesionRequest request) {
         if (request.getCompetenciaIds() == null || request.getCompetenciaIds().isEmpty()) {
-            throw new BusinessRuleException("La sesiÃ³n debe incluir al menos una competencia");
+            throw new BusinessRuleException("La sesiÃƒÂ³n debe incluir al menos una competencia");
         }
 
         Unidad unidad = referenceResolver.findUnidad(request.getUnidadId());
@@ -60,7 +60,7 @@ public class GuardarSesionService {
         sesion.setDesempenos(validateDesempenos(uniqueIds(request.getDesempenoIds()), sesion.getCompetencias(), unidad));
         sesion.setActividades(recursiveActivityAssembler.assemble(sesion, request.getActividades()));
         if (sesion.getActividades().isEmpty()) {
-            throw new BusinessRuleException("La sesiÃ³n debe incluir al menos una actividad");
+            throw new BusinessRuleException("La sesiÃƒÂ³n debe incluir al menos una actividad");
         }
         sesion.setCriteriosEvaluacion(buildCriteria(request, sesion));
         sesion.setEvidencias(buildEvidence(request, sesion));
@@ -71,7 +71,7 @@ public class GuardarSesionService {
     }
 
     private List<Capacidad> validateCapacidades(List<Capacidad> capacidades, List<Competencia> competencias) {
-        List<Long> competenciaIds = competencias.stream().map(Competencia::getId).toList();
+        List<Integer> competenciaIds = competencias.stream().map(Competencia::getId).toList();
         boolean invalid = capacidades.stream().anyMatch(item -> !competenciaIds.contains(item.getCompetencia().getId()));
         if (invalid) {
             throw new BusinessRuleException("Todas las capacidades deben pertenecer a las competencias seleccionadas");
@@ -82,28 +82,28 @@ public class GuardarSesionService {
     private List<Competencia> validateCompetencias(List<Competencia> competencias, Unidad unidad) {
         boolean invalid = competencias.stream().anyMatch(item -> !item.getArea().getId().equals(unidad.getArea().getId()));
         if (invalid) {
-            throw new BusinessRuleException("Todas las competencias deben corresponder al Ã¡rea de la unidad");
+            throw new BusinessRuleException("Todas las competencias deben corresponder al ÃƒÂ¡rea de la unidad");
         }
         return competencias;
     }
 
-    private List<Desempeno> validateDesempenos(List<Long> desempenoIds, List<Competencia> competencias, Unidad unidad) {
+    private List<Desempeno> validateDesempenos(List<Integer> desempenoIds, List<Competencia> competencias, Unidad unidad) {
         if (desempenoIds.isEmpty()) {
             return List.of();
         }
 
         List<Desempeno> desempenos = desempenoRepository.findByIdIn(desempenoIds);
         if (desempenos.size() != desempenoIds.size()) {
-            throw new BusinessRuleException("Uno o mÃ¡s desempeÃ±os no existen");
+            throw new BusinessRuleException("Uno o mÃƒÂ¡s desempeÃƒÂ±os no existen");
         }
 
-        List<Long> competenciaIds = competencias.stream().map(Competencia::getId).toList();
+        List<Integer> competenciaIds = competencias.stream().map(Competencia::getId).toList();
         boolean invalid = desempenos.stream().anyMatch(item ->
             !competenciaIds.contains(item.getCompetencia().getId())
                 || !item.getGrado().getId().equals(unidad.getGrado().getId())
         );
         if (invalid) {
-            throw new BusinessRuleException("Todos los desempeÃ±os deben corresponder al grado y competencias de la sesiÃ³n");
+            throw new BusinessRuleException("Todos los desempeÃƒÂ±os deben corresponder al grado y competencias de la sesiÃƒÂ³n");
         }
         return desempenos;
     }
@@ -142,7 +142,7 @@ public class GuardarSesionService {
         return instrumento;
     }
 
-    private List<Long> uniqueIds(List<Long> ids) {
+    private List<Integer> uniqueIds(List<Integer> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
         }
@@ -159,4 +159,5 @@ public class GuardarSesionService {
             .toList();
     }
 }
+
 

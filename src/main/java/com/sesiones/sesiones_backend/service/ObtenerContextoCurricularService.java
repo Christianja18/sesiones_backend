@@ -20,7 +20,7 @@ public class ObtenerContextoCurricularService {
     private final DesempenoRepository desempenoRepository;
 
     @Transactional(readOnly = true)
-    public CurriculumContextResponse execute(Long nivelId, Long gradoId, Long areaId, Long competenciaId) {
+    public CurriculumContextResponse execute(Integer nivelId, Integer gradoId, Integer areaId, Integer competenciaId) {
         var nivel = referenceResolver.findNivel(nivelId);
         var grado = referenceResolver.findGradoByNivel(gradoId, nivelId);
         var area = referenceResolver.findArea(areaId);
@@ -44,4 +44,5 @@ public class ObtenerContextoCurricularService {
             .build();
     }
 }
+
 

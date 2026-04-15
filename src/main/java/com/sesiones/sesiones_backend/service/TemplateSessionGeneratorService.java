@@ -57,15 +57,15 @@ public class TemplateSessionGeneratorService {
         return ActividadesSesionDto.builder()
             .inicio(List.of(
                 "Activar saberes previos con preguntas guiadas sobre " + tema + ".",
-                "Presentar el propÃ³sito de aprendizaje y relacionarlo con el contexto: " + contexto + "."
+                "Presentar el propÃƒÂ³sito de aprendizaje y relacionarlo con el contexto: " + contexto + "."
             ))
             .desarrollo(List.of(
                 "Desarrollar una actividad central que permita evidenciar la competencia: " + competencia + ".",
-                "AcompaÃ±ar el trabajo con retroalimentaciÃ³n formativa y ejemplos contextualizados."
+                "AcompaÃƒÂ±ar el trabajo con retroalimentaciÃƒÂ³n formativa y ejemplos contextualizados."
             ))
             .cierre(List.of(
                 "Socializar hallazgos y recoger conclusiones del grupo.",
-                "Promover metacogniciÃ³n con una reflexiÃ³n breve sobre lo aprendido y su aplicaciÃ³n."
+                "Promover metacogniciÃƒÂ³n con una reflexiÃƒÂ³n breve sobre lo aprendido y su aplicaciÃƒÂ³n."
             ))
             .build();
     }
@@ -73,7 +73,7 @@ public class TemplateSessionGeneratorService {
     private List<String> buildCriteria(List<Capacidad> capacidades, List<Desempeno> desempenos) {
         if (!desempenos.isEmpty()) {
             return desempenos.stream()
-                .map(item -> "EvalÃºa evidencias alineadas al desempeÃ±o: " + item.getDescripcion())
+                .map(item -> "EvalÃƒÂºa evidencias alineadas al desempeÃƒÂ±o: " + item.getDescripcion())
                 .toList();
         }
 
@@ -85,7 +85,7 @@ public class TemplateSessionGeneratorService {
     private List<String> buildEvidence(String tema, List<Desempeno> desempenos) {
         if (!desempenos.isEmpty()) {
             return desempenos.stream()
-                .map(item -> "Producto o actuaciÃ³n observable vinculada a: " + item.getDescripcion())
+                .map(item -> "Producto o actuaciÃƒÂ³n observable vinculada a: " + item.getDescripcion())
                 .toList();
         }
 

@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.sesiones.sesiones_backend.entity.Sesion;
 
-public interface SesionRepository extends JpaRepository<Sesion, Long> {
+public interface SesionRepository extends JpaRepository<Sesion, Integer> {
 
     @EntityGraph(attributePaths = {
         "unidad",
@@ -22,5 +22,6 @@ public interface SesionRepository extends JpaRepository<Sesion, Long> {
         "evidencias",
         "instrumentosEvaluacion"
     })
-    Optional<Sesion> findDetailedById(Long id);
+    Optional<Sesion> findDetailedById(Integer id);
 }
+

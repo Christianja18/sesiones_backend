@@ -14,16 +14,16 @@ import lombok.NoArgsConstructor;
 public class GenerateSesionRequest {
 
     @NotNull
-    private Long nivelId;
+    private Integer nivelId;
 
     @NotNull
-    private Long gradoId;
+    private Integer gradoId;
 
     @NotNull
-    private Long areaId;
+    private Integer areaId;
 
     @NotNull
-    private Long competenciaId;
+    private Integer competenciaId;
 
     @NotBlank
     private String tema;
@@ -34,3 +34,4 @@ public class GenerateSesionRequest {
     @NotNull
     private Integer duracionMinutos;
 }
+

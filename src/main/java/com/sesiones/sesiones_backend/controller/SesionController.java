@@ -32,20 +32,21 @@ public class SesionController {
     private final ObtenerSesionService obtenerSesionService;
 
     @PostMapping("/generar")
-    @Operation(summary = "Generar borrador de sesión")
+    @Operation(summary = "Generar borrador de sesiÃ³n")
     public ResponseEntity<SesionResponse> generate(@Valid @RequestBody GenerateSesionRequest request) {
         return ResponseEntity.ok(generarSesionService.execute(request));
     }
 
     @PostMapping
-    @Operation(summary = "Guardar sesión")
+    @Operation(summary = "Guardar sesiÃ³n")
     public ResponseEntity<SesionResponse> save(@Valid @RequestBody SaveSesionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(guardarSesionService.execute(request));
     }
 
     @GetMapping("/{sesionId}")
-    @Operation(summary = "Obtener sesión por id")
-    public ResponseEntity<SesionResponse> findById(@PathVariable Long sesionId) {
+    @Operation(summary = "Obtener sesiÃ³n por id")
+    public ResponseEntity<SesionResponse> findById(@PathVariable Integer sesionId) {
         return ResponseEntity.ok(obtenerSesionService.execute(sesionId));
     }
 }
+

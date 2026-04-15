@@ -41,7 +41,7 @@ public class DocumentoCurriculoController {
     @PatchMapping("/{documentoCurriculoId}/procesamiento")
     @Operation(summary = "Actualizar procesamiento del documento curricular")
     public ResponseEntity<DocumentoCurriculoResponse> updateProcessing(
-        @PathVariable Long documentoCurriculoId,
+        @PathVariable Integer documentoCurriculoId,
         @Valid @RequestBody UpdateDocumentoCurriculoProcesamientoRequest request
     ) {
         return ResponseEntity.ok(actualizarProcesamientoDocumentoCurriculoService.execute(documentoCurriculoId, request));
@@ -49,7 +49,8 @@ public class DocumentoCurriculoController {
 
     @GetMapping("/{documentoCurriculoId}")
     @Operation(summary = "Obtener documento curricular por id")
-    public ResponseEntity<DocumentoCurriculoResponse> findById(@PathVariable Long documentoCurriculoId) {
+    public ResponseEntity<DocumentoCurriculoResponse> findById(@PathVariable Integer documentoCurriculoId) {
         return ResponseEntity.ok(obtenerDocumentoCurriculoService.execute(documentoCurriculoId));
     }
 }
+

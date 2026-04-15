@@ -18,10 +18,11 @@ public class ObtenerSesionService {
     private final SessionResponseMapper sessionResponseMapper;
 
     @Transactional(readOnly = true)
-    public SesionResponse execute(Long sesionId) {
+    public SesionResponse execute(Integer sesionId) {
         return sesionRepository.findDetailedById(sesionId)
             .map(sessionResponseMapper::toSesionResponse)
-            .orElseThrow(() -> new ResourceNotFoundException("No existe la sesiÃ³n con id " + sesionId));
+            .orElseThrow(() -> new ResourceNotFoundException("No existe la sesiÃƒÂ³n con id " + sesionId));
     }
 }
+
 

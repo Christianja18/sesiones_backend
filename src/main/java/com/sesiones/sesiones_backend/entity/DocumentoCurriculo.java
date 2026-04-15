@@ -20,10 +20,10 @@ import lombok.Setter;
 @Table(name = "documento_curriculo")
 public class DocumentoCurriculo extends BaseEntity {
 
-    @Column(name = "nombre_archivo", nullable = false)
+    @Column(name = "nombre_archivo", nullable = false, length = 255)
     private String nombreArchivo;
 
-    @Column(name = "ruta_archivo", nullable = false)
+    @Column(name = "ruta_archivo", nullable = false, length = 500)
     private String rutaArchivo;
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -18,10 +18,11 @@ public class ObtenerUnidadService {
     private final SessionResponseMapper sessionResponseMapper;
 
     @Transactional(readOnly = true)
-    public UnidadResponse execute(Long unidadId) {
+    public UnidadResponse execute(Integer unidadId) {
         return unidadRepository.findDetailedById(unidadId)
             .map(sessionResponseMapper::toUnidadResponse)
             .orElseThrow(() -> new ResourceNotFoundException("No existe la unidad con id " + unidadId));
     }
 }
+
 

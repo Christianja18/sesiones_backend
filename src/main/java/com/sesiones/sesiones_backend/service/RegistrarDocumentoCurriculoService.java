@@ -37,7 +37,7 @@ public class RegistrarDocumentoCurriculoService {
         DocumentoCurriculoProcesamiento procesamiento = new DocumentoCurriculoProcesamiento();
         procesamiento.setDocumentoCurriculo(savedDocument);
         procesamiento.setEstado(DocumentoProcesamientoEstado.PENDIENTE);
-        procesamiento.setObservacion("Pendiente de extracciÃ³n del contenido curricular");
+        procesamiento.setObservacion("Pendiente de extracciÃƒÂ³n del contenido curricular");
         DocumentoCurriculoProcesamiento savedProcessing = documentoCurriculoProcesamientoRepository.save(procesamiento);
         savedDocument.setProcesamiento(savedProcessing);
 
