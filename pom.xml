@@ -65,6 +65,18 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.4</version>
+			<exclusions>
+				<exclusion>
+					<groupId>commons-logging</groupId>
+					<artifactId>commons-logging</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
@@ -91,7 +103,9 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<useFile>false</useFile>
-					<disableXmlReport>true</disableXmlReport>
+					<statelessTestsetReporter>
+						<disable>true</disable>
+					</statelessTestsetReporter>
 				</configuration>
 			</plugin>
 			<plugin>

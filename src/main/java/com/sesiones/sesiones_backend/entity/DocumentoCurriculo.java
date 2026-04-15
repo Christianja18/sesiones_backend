@@ -4,12 +4,13 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import jakarta.persistence.Basic;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,8 +24,10 @@ public class DocumentoCurriculo extends BaseEntity {
     @Column(name = "nombre_archivo", nullable = false, length = 255)
     private String nombreArchivo;
 
-    @Column(name = "ruta_archivo", nullable = false, length = 500)
-    private String rutaArchivo;
+    @Lob
+    @Basic(fetch = FetchType.LAZY)
+    @Column(name = "archivo_pdf", nullable = false, columnDefinition = "LONGBLOB")
+    private byte[] archivoPdf;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "area_id")
@@ -37,7 +40,4 @@ public class DocumentoCurriculo extends BaseEntity {
     @CreationTimestamp
     @Column(name = "fecha_subida", nullable = false, updatable = false)
     private LocalDateTime fechaSubida;
-
-    @OneToOne(mappedBy = "documentoCurriculo", fetch = FetchType.LAZY)
-    private DocumentoCurriculoProcesamiento procesamiento;
 }

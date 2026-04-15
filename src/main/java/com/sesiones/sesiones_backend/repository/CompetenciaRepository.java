@@ -11,6 +11,8 @@ public interface CompetenciaRepository extends JpaRepository<Competencia, Intege
 
     Optional<Competencia> findByIdAndAreaId(Integer id, Integer areaId);
 
+    Optional<Competencia> findByAreaIdAndDescripcionIgnoreCase(Integer areaId, String descripcion);
+
     List<Competencia> findByIdIn(List<Integer> ids);
 }
 

@@ -15,7 +15,6 @@ public class DocumentoCurriculoResponse {
 
     private Integer id;
     private String nombreArchivo;
-    private String rutaArchivo;
     private Integer areaId;
     private String areaNombre;
     private Integer gradoId;
@@ -23,6 +22,5 @@ public class DocumentoCurriculoResponse {
     private Integer nivelId;
     private String nivelNombre;
     private LocalDateTime fechaSubida;
-    private DocumentoCurriculoProcesamientoResponse procesamiento;
 }
 
