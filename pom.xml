@@ -91,7 +91,9 @@
 				<artifactId>maven-surefire-plugin</artifactId>
 				<configuration>
 					<useFile>false</useFile>
-					<disableXmlReport>true</disableXmlReport>
+					<statelessTestsetReporter>
+						<disable>true</disable>
+					</statelessTestsetReporter>
 				</configuration>
 			</plugin>
 			<plugin>

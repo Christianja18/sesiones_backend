@@ -7,8 +7,7 @@ Backend Spring Boot para gestion de docentes, unidades, sesiones y documentos cu
 - `POST /api/v1/docentes`
 - `POST /api/v1/unidades`
 - `GET /api/v1/unidades/{id}`
-- `POST /api/v1/documentos-curriculo`
-- `PATCH /api/v1/documentos-curriculo/{id}/procesamiento`
+- `POST /api/v1/documentos-curriculo` (`multipart/form-data`, campo `archivo`)
 - `GET /api/v1/documentos-curriculo/{id}`
 - `GET /api/v1/curriculum/contexto`
 - `POST /api/v1/sesiones/generar`
@@ -24,4 +23,4 @@ Backend Spring Boot para gestion de docentes, unidades, sesiones y documentos cu
 
 - La generacion de sesiones quedo abstraida en un servicio reemplazable.
 - En esta version se entrega un generador deterministico de plantilla, listo para sustituirse por un adaptador LLM cuando exista contrato y credenciales.
-- El esquema normalizado separa `institucion` de `docente` y el estado de `documento_curriculo` en `documento_curriculo_procesamiento`.
+- `documento_curriculo` almacena el PDF directamente en la base de datos mediante `archivo_pdf`.

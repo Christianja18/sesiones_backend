@@ -1,19 +1,17 @@
 package com.sesiones.sesiones_backend.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.sesiones.sesiones_backend.dto.CreateDocumentoCurriculoRequest;
 import com.sesiones.sesiones_backend.dto.DocumentoCurriculoResponse;
-import com.sesiones.sesiones_backend.dto.UpdateDocumentoCurriculoProcesamientoRequest;
-import com.sesiones.sesiones_backend.service.ActualizarProcesamientoDocumentoCurriculoService;
+import com.sesiones.sesiones_backend.dto.UploadDocumentoCurriculoRequest;
 import com.sesiones.sesiones_backend.service.ObtenerDocumentoCurriculoService;
 import com.sesiones.sesiones_backend.service.RegistrarDocumentoCurriculoService;
 
@@ -29,22 +27,12 @@ import lombok.RequiredArgsConstructor;
 public class DocumentoCurriculoController {
 
     private final RegistrarDocumentoCurriculoService registrarDocumentoCurriculoService;
-    private final ActualizarProcesamientoDocumentoCurriculoService actualizarProcesamientoDocumentoCurriculoService;
     private final ObtenerDocumentoCurriculoService obtenerDocumentoCurriculoService;
 
-    @PostMapping
-    @Operation(summary = "Registrar documento curricular")
-    public ResponseEntity<DocumentoCurriculoResponse> create(@Valid @RequestBody CreateDocumentoCurriculoRequest request) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Operation(summary = "Registrar documento curricular en PDF")
+    public ResponseEntity<DocumentoCurriculoResponse> create(@Valid @ModelAttribute UploadDocumentoCurriculoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(registrarDocumentoCurriculoService.execute(request));
-    }
-
-    @PatchMapping("/{documentoCurriculoId}/procesamiento")
-    @Operation(summary = "Actualizar procesamiento del documento curricular")
-    public ResponseEntity<DocumentoCurriculoResponse> updateProcessing(
-        @PathVariable Integer documentoCurriculoId,
-        @Valid @RequestBody UpdateDocumentoCurriculoProcesamientoRequest request
-    ) {
-        return ResponseEntity.ok(actualizarProcesamientoDocumentoCurriculoService.execute(documentoCurriculoId, request));
     }
 
     @GetMapping("/{documentoCurriculoId}")

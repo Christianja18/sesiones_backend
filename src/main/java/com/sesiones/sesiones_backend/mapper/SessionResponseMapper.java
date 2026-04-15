@@ -12,7 +12,6 @@ import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sesiones.sesiones_backend.dto.ActividadesSesionDto;
-import com.sesiones.sesiones_backend.dto.DocumentoCurriculoProcesamientoResponse;
 import com.sesiones.sesiones_backend.dto.DocumentoCurriculoResponse;
 import com.sesiones.sesiones_backend.dto.InstrumentoEvaluacionDto;
 import com.sesiones.sesiones_backend.dto.SesionResponse;
@@ -20,7 +19,6 @@ import com.sesiones.sesiones_backend.dto.TextoReferenciaResponse;
 import com.sesiones.sesiones_backend.dto.UnidadResponse;
 import com.sesiones.sesiones_backend.entity.Actividad;
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
-import com.sesiones.sesiones_backend.entity.DocumentoCurriculoProcesamiento;
 import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.InstrumentoEvaluacion;
 import com.sesiones.sesiones_backend.entity.Sesion;
@@ -132,7 +130,6 @@ public class SessionResponseMapper {
         return DocumentoCurriculoResponse.builder()
             .id(documentoCurriculo.getId())
             .nombreArchivo(documentoCurriculo.getNombreArchivo())
-            .rutaArchivo(documentoCurriculo.getRutaArchivo())
             .areaId(area == null ? null : area.getId())
             .areaNombre(area == null ? null : area.getNombre())
             .gradoId(grado == null ? null : grado.getId())
@@ -140,7 +137,6 @@ public class SessionResponseMapper {
             .nivelId(nivel == null ? null : nivel.getId())
             .nivelNombre(nivel == null ? null : nivel.getNombre())
             .fechaSubida(documentoCurriculo.getFechaSubida())
-            .procesamiento(toDocumentoProcesamientoResponse(documentoCurriculo.getProcesamiento()))
             .build();
     }
 
@@ -204,21 +200,6 @@ public class SessionResponseMapper {
             .filter(item -> item != null && !item.isBlank())
             .map(String::trim)
             .collect(Collectors.toList());
-    }
-
-    private DocumentoCurriculoProcesamientoResponse toDocumentoProcesamientoResponse(DocumentoCurriculoProcesamiento procesamiento) {
-        if (procesamiento == null) {
-            return null;
-        }
-
-        return DocumentoCurriculoProcesamientoResponse.builder()
-            .id(procesamiento.getId())
-            .estado(procesamiento.getEstado() == null ? null : procesamiento.getEstado().getDatabaseValue())
-            .observacion(procesamiento.getObservacion())
-            .fechaUltimoProceso(procesamiento.getFechaUltimoProceso())
-            .createdAt(procesamiento.getCreatedAt())
-            .updatedAt(procesamiento.getUpdatedAt())
-            .build();
     }
 
     private List<TextoReferenciaResponse> mapReferences(List<TextoReferenciaResponse> references) {
