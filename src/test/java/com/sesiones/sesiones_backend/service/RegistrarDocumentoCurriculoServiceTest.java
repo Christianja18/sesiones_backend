@@ -16,7 +16,9 @@ import org.springframework.mock.web.MockMultipartFile;
 
 import com.sesiones.sesiones_backend.dto.DocumentoCurriculoResponse;
 import com.sesiones.sesiones_backend.dto.UploadDocumentoCurriculoRequest;
+import com.sesiones.sesiones_backend.entity.Area;
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
+import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
@@ -29,6 +31,9 @@ class RegistrarDocumentoCurriculoServiceTest {
 
     @Mock
     private DocumentoCurriculoRepository documentoCurriculoRepository;
+
+    @Mock
+    private PoblarCurriculoDesdeDocumentoService poblarCurriculoDesdeDocumentoService;
 
     @Mock
     private SessionResponseMapper sessionResponseMapper;
@@ -66,6 +71,9 @@ class RegistrarDocumentoCurriculoServiceTest {
             .archivo(archivo)
             .build();
 
+        when(poblarCurriculoDesdeDocumentoService.execute(any(byte[].class), any(), any())).thenReturn(
+            new ResultadoPoblacionCurricular(null, null)
+        );
         when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> {
             DocumentoCurriculo documento = invocation.getArgument(0);
             documento.setId(7);
