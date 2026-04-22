@@ -4,13 +4,10 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
-import jakarta.persistence.Basic;
+import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,20 +21,22 @@ public class DocumentoCurriculo extends BaseEntity {
     @Column(name = "nombre_archivo", nullable = false, length = 255)
     private String nombreArchivo;
 
-    @Lob
-    @Basic(fetch = FetchType.LAZY)
-    @Column(name = "archivo_pdf", nullable = false, columnDefinition = "LONGBLOB")
-    private byte[] archivoPdf;
+    @Column(name = "archivo_url", nullable = false, unique = true, length = 500)
+    private String archivoUrl;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "area_id")
-    private Area area;
+    @Column(name = "checksum_sha256", unique = true, length = 64)
+    private String checksumSha256;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "grado_id")
-    private Grado grado;
+    @Column(nullable = false, columnDefinition = "ENUM('PENDIENTE','PROCESANDO','PROCESADO','ERROR')")
+    private ProcesamientoEstado estado;
+
+    @Column(name = "error_detalle", columnDefinition = "TEXT")
+    private String errorDetalle;
 
     @CreationTimestamp
     @Column(name = "fecha_subida", nullable = false, updatable = false)
     private LocalDateTime fechaSubida;
+
+    @Column(name = "fecha_procesado")
+    private LocalDateTime fechaProcesado;
 }

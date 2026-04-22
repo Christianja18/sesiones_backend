@@ -4,14 +4,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sesiones.sesiones_backend.dto.DocumentoCurriculoResponse;
-import com.sesiones.sesiones_backend.dto.UploadDocumentoCurriculoRequest;
+import com.sesiones.sesiones_backend.dto.RegisterDocumentoCurriculoRequest;
 import com.sesiones.sesiones_backend.service.ObtenerDocumentoCurriculoService;
 import com.sesiones.sesiones_backend.service.RegistrarDocumentoCurriculoService;
 
@@ -29,9 +29,9 @@ public class DocumentoCurriculoController {
     private final RegistrarDocumentoCurriculoService registrarDocumentoCurriculoService;
     private final ObtenerDocumentoCurriculoService obtenerDocumentoCurriculoService;
 
-    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(summary = "Registrar documento curricular en PDF")
-    public ResponseEntity<DocumentoCurriculoResponse> create(@Valid @ModelAttribute UploadDocumentoCurriculoRequest request) {
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Registrar referencia de documento curricular")
+    public ResponseEntity<DocumentoCurriculoResponse> create(@Valid @RequestBody RegisterDocumentoCurriculoRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(registrarDocumentoCurriculoService.execute(request));
     }
 

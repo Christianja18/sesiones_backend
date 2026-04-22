@@ -19,6 +19,10 @@ public class Grado extends BaseEntity {
     @JoinColumn(name = "nivel_id", nullable = false)
     private NivelEducativo nivel;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "ciclo_id", nullable = false)
+    private Ciclo ciclo;
+
     @Column(nullable = false, length = 50)
     private String nombre;
 }

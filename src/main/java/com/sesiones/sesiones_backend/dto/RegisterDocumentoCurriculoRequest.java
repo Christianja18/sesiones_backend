@@ -1,7 +1,6 @@
 package com.sesiones.sesiones_backend.dto;
 
-import java.time.LocalDateTime;
-
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,15 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DocumentoCurriculoResponse {
+public class RegisterDocumentoCurriculoRequest {
 
-    private Integer id;
+    @NotBlank
     private String nombreArchivo;
-    private String archivoUrl;
-    private String checksumSha256;
-    private String estado;
-    private String errorDetalle;
-    private LocalDateTime fechaSubida;
-    private LocalDateTime fechaProcesado;
-}
 
+    @NotBlank
+    private String archivoUrl;
+}

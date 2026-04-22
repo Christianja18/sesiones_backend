@@ -19,7 +19,7 @@ public class ObtenerDocumentoCurriculoService {
 
     @Transactional(readOnly = true)
     public DocumentoCurriculoResponse execute(Integer documentoCurriculoId) {
-        return documentoCurriculoRepository.findDetailedById(documentoCurriculoId)
+        return documentoCurriculoRepository.findById(documentoCurriculoId)
             .map(sessionResponseMapper::toDocumentoCurriculoResponse)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el documento curricular con id " + documentoCurriculoId));
     }

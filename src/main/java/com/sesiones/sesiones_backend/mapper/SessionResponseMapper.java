@@ -123,20 +123,15 @@ public class SessionResponseMapper {
             return null;
         }
 
-        var area = documentoCurriculo.getArea();
-        Grado grado = documentoCurriculo.getGrado();
-        var nivel = grado == null ? null : grado.getNivel();
-
         return DocumentoCurriculoResponse.builder()
             .id(documentoCurriculo.getId())
             .nombreArchivo(documentoCurriculo.getNombreArchivo())
-            .areaId(area == null ? null : area.getId())
-            .areaNombre(area == null ? null : area.getNombre())
-            .gradoId(grado == null ? null : grado.getId())
-            .gradoNombre(grado == null ? null : grado.getNombre())
-            .nivelId(nivel == null ? null : nivel.getId())
-            .nivelNombre(nivel == null ? null : nivel.getNombre())
+            .archivoUrl(documentoCurriculo.getArchivoUrl())
+            .checksumSha256(documentoCurriculo.getChecksumSha256())
+            .estado(documentoCurriculo.getEstado() == null ? null : documentoCurriculo.getEstado().getDatabaseValue())
+            .errorDetalle(documentoCurriculo.getErrorDetalle())
             .fechaSubida(documentoCurriculo.getFechaSubida())
+            .fechaProcesado(documentoCurriculo.getFechaProcesado())
             .build();
     }
 

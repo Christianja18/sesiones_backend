@@ -3,6 +3,7 @@ package com.sesiones.sesiones_backend.service;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,20 +13,17 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockMultipartFile;
 
 import com.sesiones.sesiones_backend.dto.DocumentoCurriculoResponse;
-import com.sesiones.sesiones_backend.dto.UploadDocumentoCurriculoRequest;
+import com.sesiones.sesiones_backend.dto.RegisterDocumentoCurriculoRequest;
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 @ExtendWith(MockitoExtension.class)
 class RegistrarDocumentoCurriculoServiceTest {
-
-    @Mock
-    private ReferenceResolver referenceResolver;
 
     @Mock
     private DocumentoCurriculoRepository documentoCurriculoRepository;
@@ -37,35 +35,37 @@ class RegistrarDocumentoCurriculoServiceTest {
     private RegistrarDocumentoCurriculoService registrarDocumentoCurriculoService;
 
     @Test
-    void shouldRejectNonPdfFiles() {
-        MockMultipartFile archivo = new MockMultipartFile(
-            "archivo",
-            "curriculo.txt",
-            "text/plain",
-            "contenido".getBytes()
-        );
-
-        UploadDocumentoCurriculoRequest request = UploadDocumentoCurriculoRequest.builder()
-            .archivo(archivo)
+    void shouldRejectNonPdfFileNames() {
+        RegisterDocumentoCurriculoRequest request = RegisterDocumentoCurriculoRequest.builder()
+            .nombreArchivo("curriculo.txt")
+            .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.txt")
             .build();
 
         assertThrows(BusinessRuleException.class, () -> registrarDocumentoCurriculoService.execute(request));
+        verify(documentoCurriculoRepository, never()).save(any(DocumentoCurriculo.class));
     }
 
     @Test
-    void shouldRegisterPdfDocument() {
-        byte[] contenido = "%PDF-1.4".getBytes();
-        MockMultipartFile archivo = new MockMultipartFile(
-            "archivo",
-            "curriculo.pdf",
-            "application/pdf",
-            contenido
-        );
-
-        UploadDocumentoCurriculoRequest request = UploadDocumentoCurriculoRequest.builder()
-            .archivo(archivo)
+    void shouldRejectDuplicatedDocumentUrl() {
+        RegisterDocumentoCurriculoRequest request = RegisterDocumentoCurriculoRequest.builder()
+            .nombreArchivo("curriculo.pdf")
+            .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")
             .build();
 
+        when(documentoCurriculoRepository.existsByArchivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")).thenReturn(true);
+
+        assertThrows(BusinessRuleException.class, () -> registrarDocumentoCurriculoService.execute(request));
+        verify(documentoCurriculoRepository, never()).save(any(DocumentoCurriculo.class));
+    }
+
+    @Test
+    void shouldRegisterDocumentReference() {
+        RegisterDocumentoCurriculoRequest request = RegisterDocumentoCurriculoRequest.builder()
+            .nombreArchivo("curriculo.pdf")
+            .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")
+            .build();
+
+        when(documentoCurriculoRepository.existsByArchivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")).thenReturn(false);
         when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> {
             DocumentoCurriculo documento = invocation.getArgument(0);
             documento.setId(7);
@@ -75,6 +75,8 @@ class RegistrarDocumentoCurriculoServiceTest {
             DocumentoCurriculoResponse.builder()
                 .id(7)
                 .nombreArchivo("curriculo.pdf")
+                .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")
+                .estado("PENDIENTE")
                 .build()
         );
 
@@ -85,7 +87,8 @@ class RegistrarDocumentoCurriculoServiceTest {
 
         DocumentoCurriculo savedDocumento = captor.getValue();
         assertEquals("curriculo.pdf", savedDocumento.getNombreArchivo());
-        assertEquals("%PDF-1.4", new String(savedDocumento.getArchivoPdf()));
+        assertEquals("https://minedu.gob.pe/curriculo/curriculo.pdf", savedDocumento.getArchivoUrl());
+        assertEquals(ProcesamientoEstado.PENDIENTE, savedDocumento.getEstado());
         assertEquals(7, response.getId());
     }
 }

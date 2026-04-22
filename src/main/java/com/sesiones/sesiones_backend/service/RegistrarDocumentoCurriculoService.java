@@ -1,18 +1,19 @@
 package com.sesiones.sesiones_backend.service;
 
-import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.sesiones.sesiones_backend.dto.DocumentoCurriculoResponse;
-import com.sesiones.sesiones_backend.dto.UploadDocumentoCurriculoRequest;
+import com.sesiones.sesiones_backend.dto.RegisterDocumentoCurriculoRequest;
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 import lombok.RequiredArgsConstructor;
 
@@ -20,50 +21,73 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class RegistrarDocumentoCurriculoService {
 
-    private final ReferenceResolver referenceResolver;
     private final DocumentoCurriculoRepository documentoCurriculoRepository;
     private final SessionResponseMapper sessionResponseMapper;
 
     @Transactional
-    public DocumentoCurriculoResponse execute(UploadDocumentoCurriculoRequest request) {
-        MultipartFile archivo = request.getArchivo();
-        validatePdfFile(archivo);
+    public DocumentoCurriculoResponse execute(RegisterDocumentoCurriculoRequest request) {
+        validateRequest(request);
+
+        String nombreArchivo = normalizeFileName(request.getNombreArchivo());
+        String archivoUrl = normalizeArchivoUrl(request.getArchivoUrl());
+
+        validatePdfFileName(nombreArchivo);
+        validateArchivoUrl(archivoUrl);
+
+        if (documentoCurriculoRepository.existsByArchivoUrl(archivoUrl)) {
+            throw new BusinessRuleException("Ya existe un documento curricular registrado con la misma URL");
+        }
 
         DocumentoCurriculo documentoCurriculo = new DocumentoCurriculo();
-        documentoCurriculo.setNombreArchivo(normalizeFileName(archivo));
-        documentoCurriculo.setArchivoPdf(readPdfContent(archivo));
-        documentoCurriculo.setArea(request.getAreaId() == null ? null : referenceResolver.findArea(request.getAreaId()));
-        documentoCurriculo.setGrado(request.getGradoId() == null ? null : referenceResolver.findGrado(request.getGradoId()));
+        documentoCurriculo.setNombreArchivo(nombreArchivo);
+        documentoCurriculo.setArchivoUrl(archivoUrl);
+        documentoCurriculo.setEstado(ProcesamientoEstado.PENDIENTE);
 
         DocumentoCurriculo savedDocument = documentoCurriculoRepository.save(documentoCurriculo);
         return sessionResponseMapper.toDocumentoCurriculoResponse(savedDocument);
     }
 
-    private void validatePdfFile(MultipartFile archivo) {
-        if (archivo == null || archivo.isEmpty()) {
-            throw new BusinessRuleException("El archivo PDF es obligatorio");
+    private void validateRequest(RegisterDocumentoCurriculoRequest request) {
+        if (request == null) {
+            throw new BusinessRuleException("La referencia del documento curricular es obligatoria");
+        }
+    }
+
+    private void validatePdfFileName(String nombreArchivo) {
+        if (nombreArchivo == null || nombreArchivo.isBlank()) {
+            throw new BusinessRuleException("El nombre del archivo PDF es obligatorio");
         }
 
-        String nombreArchivo = archivo.getOriginalFilename();
-        if (nombreArchivo == null || nombreArchivo.trim().isEmpty()) {
-            throw new BusinessRuleException("No fue posible identificar el nombre del archivo PDF");
-        }
-
-        String normalizedName = nombreArchivo.trim().toLowerCase(Locale.ROOT);
+        String normalizedName = nombreArchivo.toLowerCase(Locale.ROOT);
         if (!normalizedName.endsWith(".pdf")) {
-            throw new BusinessRuleException("Solo se permite registrar archivos con extension .pdf");
+            throw new BusinessRuleException("El nombre del archivo debe tener extension .pdf");
         }
     }
 
-    private String normalizeFileName(MultipartFile archivo) {
-        return archivo.getOriginalFilename().trim();
-    }
+    private void validateArchivoUrl(String archivoUrl) {
+        if (archivoUrl == null || archivoUrl.isBlank()) {
+            throw new BusinessRuleException("La URL del documento curricular es obligatoria");
+        }
 
-    private byte[] readPdfContent(MultipartFile archivo) {
         try {
-            return archivo.getBytes();
-        } catch (IOException exception) {
-            throw new BusinessRuleException("No fue posible leer el contenido del archivo PDF");
+            URI uri = new URI(archivoUrl);
+            String scheme = uri.getScheme();
+            if (scheme == null || (!"http".equalsIgnoreCase(scheme) && !"https".equalsIgnoreCase(scheme))) {
+                throw new BusinessRuleException("La URL del documento debe usar http o https");
+            }
+            if (uri.getHost() == null || uri.getHost().isBlank()) {
+                throw new BusinessRuleException("La URL del documento curricular no es valida");
+            }
+        } catch (URISyntaxException exception) {
+            throw new BusinessRuleException("La URL del documento curricular no es valida");
         }
+    }
+
+    private String normalizeFileName(String nombreArchivo) {
+        return nombreArchivo == null ? null : nombreArchivo.trim();
+    }
+
+    private String normalizeArchivoUrl(String archivoUrl) {
+        return archivoUrl == null ? null : archivoUrl.trim();
     }
 }
