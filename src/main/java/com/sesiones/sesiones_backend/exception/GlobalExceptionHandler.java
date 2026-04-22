@@ -28,6 +28,11 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), List.of(), request.getRequestURI());
     }
 
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ApiErrorResponse> handleExternalService(ExternalServiceException exception, HttpServletRequest request) {
+        return buildResponse(exception.getStatus(), exception.getMessage(), exception.getDetails(), request.getRequestURI());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponse> handleValidation(MethodArgumentNotValidException exception, HttpServletRequest request) {
         List<String> details = exception.getBindingResult().getFieldErrors().stream()
