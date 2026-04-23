@@ -16,6 +16,8 @@ public class CurriculumContextResponse {
 
     private Integer nivelId;
     private String nivelNombre;
+    private String cicloId;
+    private String cicloNombre;
     private Integer gradoId;
     private String gradoNombre;
     private Integer areaId;

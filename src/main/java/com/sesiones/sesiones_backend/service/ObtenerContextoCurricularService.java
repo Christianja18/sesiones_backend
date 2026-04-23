@@ -29,6 +29,8 @@ public class ObtenerContextoCurricularService {
         return CurriculumContextResponse.builder()
             .nivelId(nivel.getId())
             .nivelNombre(nivel.getNombre())
+            .cicloId(grado.getCiclo() == null ? null : grado.getCiclo().getId())
+            .cicloNombre(grado.getCiclo() == null ? null : grado.getCiclo().getNombre())
             .gradoId(grado.getId())
             .gradoNombre(grado.getNombre())
             .areaId(area.getId())

@@ -20,6 +20,8 @@ public class UnidadResponse {
     private String gradoNombre;
     private Integer nivelId;
     private String nivelNombre;
+    private String cicloId;
+    private String cicloNombre;
     private Integer areaId;
     private String areaNombre;
     private Integer docenteId;
