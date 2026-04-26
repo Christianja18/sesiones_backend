@@ -33,7 +33,7 @@ public class DocumentoChunk extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String contenido;
 
-    @Column(name = "hash_contenido", nullable = false, length = 64)
+    @Column(name = "hash_contenido", nullable = false, length = 64, columnDefinition = "CHAR(64)")
     private String hashContenido;
 
     @Column(nullable = false, columnDefinition = "ENUM('PENDIENTE','PROCESANDO','PROCESADO','ERROR')")

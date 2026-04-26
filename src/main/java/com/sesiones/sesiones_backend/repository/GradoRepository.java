@@ -9,5 +9,7 @@ import com.sesiones.sesiones_backend.entity.Grado;
 public interface GradoRepository extends JpaRepository<Grado, Integer> {
 
     Optional<Grado> findByIdAndNivelId(Integer id, Integer nivelId);
+
+    Optional<Grado> findByNivelIdAndNombreIgnoreCase(Integer nivelId, String nombre);
 }
 

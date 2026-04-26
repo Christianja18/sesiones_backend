@@ -25,7 +25,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ApiErrorResponse> handleBusinessRule(BusinessRuleException exception, HttpServletRequest request) {
+        LOGGER.warn("Error de negocio en {}: {}", request.getRequestURI(), exception.getMessage(), exception);
         return buildResponse(HttpStatus.BAD_REQUEST, exception.getMessage(), List.of(), request.getRequestURI());
+    }
+
+    @ExceptionHandler(ExternalServiceException.class)
+    public ResponseEntity<ApiErrorResponse> handleExternalService(ExternalServiceException exception, HttpServletRequest request) {
+        return buildResponse(exception.getStatus(), exception.getMessage(), exception.getDetails(), request.getRequestURI());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

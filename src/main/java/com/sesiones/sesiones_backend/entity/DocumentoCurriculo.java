@@ -28,7 +28,7 @@ public class DocumentoCurriculo extends BaseEntity {
     @Column(name = "archivo_url", nullable = false, unique = true, length = 500)
     private String archivoUrl;
 
-    @Column(name = "checksum_sha256", unique = true, length = 64)
+    @Column(name = "checksum_sha256", unique = true, length = 64, columnDefinition = "CHAR(64)")
     private String checksumSha256;
 
     @Column(nullable = false, columnDefinition = "ENUM('PENDIENTE','PROCESANDO','PROCESADO','ERROR')")

@@ -42,6 +42,7 @@ public class SessionResponseMapper {
 
         Grado grado = unidad.getGrado();
         var nivel = grado == null ? null : grado.getNivel();
+        var ciclo = grado == null ? null : grado.getCiclo();
         var area = unidad.getArea();
         var docente = unidad.getDocente();
         var institucion = docente == null ? null : docente.getInstitucion();
@@ -53,6 +54,8 @@ public class SessionResponseMapper {
             .gradoNombre(grado == null ? null : grado.getNombre())
             .nivelId(nivel == null ? null : nivel.getId())
             .nivelNombre(nivel == null ? null : nivel.getNombre())
+            .cicloId(ciclo == null ? null : ciclo.getId())
+            .cicloNombre(ciclo == null ? null : ciclo.getNombre())
             .areaId(area == null ? null : area.getId())
             .areaNombre(area == null ? null : area.getNombre())
             .docenteId(docente == null ? null : docente.getId())
