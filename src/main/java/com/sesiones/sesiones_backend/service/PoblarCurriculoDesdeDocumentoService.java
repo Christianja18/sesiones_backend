@@ -35,6 +35,7 @@ import com.sesiones.sesiones_backend.repository.DocumentoChunkRepository;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
 import com.sesiones.sesiones_backend.repository.GradoRepository;
 import com.sesiones.sesiones_backend.repository.NivelEducativoRepository;
+import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 import lombok.RequiredArgsConstructor;
@@ -64,6 +65,10 @@ public class PoblarCurriculoDesdeDocumentoService {
 
         DocumentoCurriculo documento = documentoCurriculoRepository.findById(documentoCurriculoId)
             .orElseThrow(() -> new BusinessRuleException("No existe el documento curricular a procesar"));
+        DocumentoCurriculoTipo tipoDocumento = documento.getTipo();
+        if (tipoDocumento == null) {
+            throw new BusinessRuleException("El tipo del documento curricular es obligatorio para poblar la base de datos");
+        }
 
         documentoChunkRepository.deleteByDocumentoId(documentoCurriculoId);
 
@@ -86,19 +91,18 @@ public class PoblarCurriculoDesdeDocumentoService {
                 : analisisChunk.analisis().getItems();
 
             for (CurriculoDocumentoParseResponse.Item item : items) {
-                ContextoCurricularResuelto contexto = resolveContext(item);
+                ContextoCurricularResuelto contexto = resolveContext(item, tipoDocumento);
                 if (!contexto.hasAnyReference()) {
                     continue;
                 }
 
-                informacionUtilEncontrada = true;
                 saveChunkClasificacion(savedChunk, contexto, item.getConfianza());
-                persistCurriculumData(contexto, item);
+                informacionUtilEncontrada = persistCurriculumData(tipoDocumento, contexto, item) || informacionUtilEncontrada;
             }
         }
 
         if (!informacionUtilEncontrada) {
-            throw new BusinessRuleException("No fue posible extraer informacion curricular util del documento");
+            throw new BusinessRuleException(buildNoUsefulDataMessage(tipoDocumento));
         }
 
         documento.setChecksumSha256(checksumSha256);
@@ -119,34 +123,70 @@ public class PoblarCurriculoDesdeDocumentoService {
         documentoChunkClasificacionRepository.save(clasificacion);
     }
 
-    private void persistCurriculumData(ContextoCurricularResuelto contexto, CurriculoDocumentoParseResponse.Item item) {
+    private boolean persistCurriculumData(
+        DocumentoCurriculoTipo tipoDocumento,
+        ContextoCurricularResuelto contexto,
+        CurriculoDocumentoParseResponse.Item item
+    ) {
+        return switch (tipoDocumento) {
+            case CURRICULO -> persistCurriculoNacionalData(contexto, item);
+            case PROGRAMA -> persistProgramaCurricularData(contexto, item);
+        };
+    }
+
+    private boolean persistCurriculoNacionalData(ContextoCurricularResuelto contexto, CurriculoDocumentoParseResponse.Item item) {
         String competenciaDescripcion = normalizeText(item.getCompetencia());
         if (contexto.area() == null || competenciaDescripcion == null) {
-            return;
+            return false;
         }
 
         Competencia competencia = findOrCreateCompetencia(contexto.area(), competenciaDescripcion);
+        boolean persisted = true;
 
         if (item.getCapacidades() != null) {
             for (String capacidadDescripcion : new LinkedHashSet<>(item.getCapacidades())) {
                 String normalizedCapacidad = normalizeText(capacidadDescripcion);
                 if (normalizedCapacidad != null) {
                     findOrCreateCapacidad(competencia, normalizedCapacidad);
+                    persisted = true;
                 }
             }
         }
 
-        if (contexto.grado() != null && item.getDesempenos() != null) {
-            for (String desempenoDescripcion : new LinkedHashSet<>(item.getDesempenos())) {
-                String normalizedDesempeno = normalizeText(desempenoDescripcion);
-                if (normalizedDesempeno != null) {
-                    findOrCreateDesempeno(contexto.grado(), competencia, normalizedDesempeno);
-                }
-            }
-        }
+        return persisted;
     }
 
-    private ContextoCurricularResuelto resolveContext(CurriculoDocumentoParseResponse.Item item) {
+    private boolean persistProgramaCurricularData(ContextoCurricularResuelto contexto, CurriculoDocumentoParseResponse.Item item) {
+        String competenciaDescripcion = normalizeText(item.getCompetencia());
+        if (contexto.area() == null || contexto.grado() == null || competenciaDescripcion == null || item.getDesempenos() == null) {
+            return false;
+        }
+
+        Competencia competencia = competenciaRepository.findByAreaIdAndDescripcion(contexto.area().getId(), competenciaDescripcion)
+            .orElse(null);
+        if (competencia == null) {
+            return false;
+        }
+
+        boolean persisted = false;
+        for (String desempenoDescripcion : new LinkedHashSet<>(item.getDesempenos())) {
+            String normalizedDesempeno = normalizeText(desempenoDescripcion);
+            if (normalizedDesempeno != null) {
+                findOrCreateDesempeno(contexto.grado(), competencia, normalizedDesempeno);
+                persisted = true;
+            }
+        }
+        return persisted;
+    }
+
+    private String buildNoUsefulDataMessage(DocumentoCurriculoTipo tipoDocumento) {
+        return switch (tipoDocumento) {
+            case CURRICULO -> "No fue posible extraer competencias o capacidades utiles del Curriculo Nacional";
+            case PROGRAMA -> "No fue posible extraer desempenos utiles del Programa Curricular. Verifica que el Curriculo Nacional haya sido procesado primero";
+        };
+    }
+
+    private ContextoCurricularResuelto resolveContext(CurriculoDocumentoParseResponse.Item item, DocumentoCurriculoTipo tipoDocumento) {
         if (item == null) {
             return ContextoCurricularResuelto.empty();
         }
@@ -156,15 +196,18 @@ public class PoblarCurriculoDesdeDocumentoService {
         String gradoNombre = normalizeGradeName(item.getGrado());
         String areaNombre = normalizeText(item.getArea());
 
-        NivelEducativo nivel = resolveNivel(nivelNombre, cicloId);
-        Ciclo ciclo = resolveCiclo(cicloId);
-        Grado grado = resolveGrado(nivel, ciclo, gradoNombre);
+        boolean onlyExistingCatalog = tipoDocumento == DocumentoCurriculoTipo.PROGRAMA;
+        NivelEducativo nivel = onlyExistingCatalog ? resolveExistingNivel(nivelNombre, cicloId) : resolveNivel(nivelNombre, cicloId);
+        Ciclo ciclo = onlyExistingCatalog ? resolveExistingCiclo(cicloId) : resolveCiclo(cicloId);
+        Grado grado = onlyExistingCatalog
+            ? resolveExistingGrado(nivel, ciclo, gradoNombre)
+            : resolveGrado(nivel, ciclo, gradoNombre);
         if (grado != null) {
             nivel = grado.getNivel();
             ciclo = grado.getCiclo();
         }
 
-        Area area = resolveArea(areaNombre);
+        Area area = onlyExistingCatalog ? resolveExistingArea(areaNombre) : resolveArea(areaNombre);
         return new ContextoCurricularResuelto(area, nivel, ciclo, grado);
     }
 
@@ -188,6 +231,22 @@ public class PoblarCurriculoDesdeDocumentoService {
             });
     }
 
+    private NivelEducativo resolveExistingNivel(String nivelNombre, String cicloId) {
+        String nivelResuelto = normalizeNivelName(nivelNombre);
+        if (nivelResuelto == null) {
+            nivelResuelto = inferNivelFromCiclo(cicloId);
+        }
+        if (nivelResuelto == null) {
+            return null;
+        }
+        final String canonicalNivel = nivelResuelto;
+
+        return nivelEducativoRepository.findAll().stream()
+            .filter(item -> sameComparableText(item.getNombre(), canonicalNivel))
+            .findFirst()
+            .orElse(null);
+    }
+
     private Ciclo resolveCiclo(String cicloId) {
         if (cicloId == null) {
             return null;
@@ -202,6 +261,14 @@ public class PoblarCurriculoDesdeDocumentoService {
             });
     }
 
+    private Ciclo resolveExistingCiclo(String cicloId) {
+        if (cicloId == null) {
+            return null;
+        }
+
+        return cicloRepository.findById(cicloId).orElse(null);
+    }
+
     private Grado resolveGrado(NivelEducativo nivel, Ciclo ciclo, String gradoNombre) {
         if (gradoNombre == null) {
             return null;
@@ -210,6 +277,33 @@ public class PoblarCurriculoDesdeDocumentoService {
         NivelEducativo nivelResuelto = nivel;
         if (nivelResuelto == null && ciclo != null) {
             nivelResuelto = resolveNivel(null, ciclo.getId());
+        }
+        if (nivelResuelto == null) {
+            return null;
+        }
+
+        Grado existing = gradoRepository.findByNivelIdAndNombreIgnoreCase(nivelResuelto.getId(), gradoNombre)
+            .orElse(null);
+        if (existing == null) {
+            return null;
+        }
+
+        String cicloEsperado = ciclo != null ? ciclo.getId() : inferCicloFromGrado(nivelResuelto.getNombre(), gradoNombre);
+        if (cicloEsperado != null && (existing.getCiclo() == null || !cicloEsperado.equalsIgnoreCase(existing.getCiclo().getId()))) {
+            return null;
+        }
+
+        return existing;
+    }
+
+    private Grado resolveExistingGrado(NivelEducativo nivel, Ciclo ciclo, String gradoNombre) {
+        if (gradoNombre == null) {
+            return null;
+        }
+
+        NivelEducativo nivelResuelto = nivel;
+        if (nivelResuelto == null && ciclo != null) {
+            nivelResuelto = resolveExistingNivel(null, ciclo.getId());
         }
         if (nivelResuelto == null) {
             return null;
@@ -242,6 +336,17 @@ public class PoblarCurriculoDesdeDocumentoService {
                 area.setNombre(toTitleCase(areaNombre));
                 return areaRepository.save(area);
             });
+    }
+
+    private Area resolveExistingArea(String areaNombre) {
+        if (areaNombre == null) {
+            return null;
+        }
+
+        return areaRepository.findAll().stream()
+            .filter(item -> sameComparableText(item.getNombre(), areaNombre))
+            .findFirst()
+            .orElse(null);
     }
 
     private Competencia findOrCreateCompetencia(Area area, String descripcion) {

@@ -22,6 +22,7 @@ import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 @ExtendWith(MockitoExtension.class)
@@ -68,7 +69,7 @@ class ProcesarDocumentoCurriculoServiceTest {
         when(documentoCurriculoRepository.existsByChecksumSha256AndIdNot(any(), any())).thenReturn(false);
         when(pdfTextExtractorService.extractPages(pdf)).thenReturn(pages);
         when(documentoCurriculoChunkerService.chunk(pages)).thenReturn(chunks);
-        when(curriculoLlmClient.extraerCurriculo("chunk 1")).thenReturn(response);
+        when(curriculoLlmClient.extraerCurriculo("chunk 1", DocumentoCurriculoTipo.CURRICULO)).thenReturn(response);
         when(sessionResponseMapper.toDocumentoCurriculoResponse(documento)).thenReturn(
             DocumentoCurriculoResponse.builder().id(7).estado("PROCESADO").build()
         );
@@ -100,6 +101,7 @@ class ProcesarDocumentoCurriculoServiceTest {
     private DocumentoCurriculo buildDocumento() {
         DocumentoCurriculo documento = new DocumentoCurriculo();
         documento.setId(7);
+        documento.setTipo(DocumentoCurriculoTipo.CURRICULO);
         documento.setNombreArchivo("curriculo.pdf");
         documento.setArchivoUrl("https://example.com/curriculo.pdf");
         documento.setEstado(ProcesamientoEstado.PENDIENTE);

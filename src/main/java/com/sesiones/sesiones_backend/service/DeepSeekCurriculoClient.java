@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sesiones.sesiones_backend.dto.CurriculoDocumentoParseResponse;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.exception.ExternalServiceException;
+import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 
 @Service
 public class DeepSeekCurriculoClient implements CurriculoLlmClient {
@@ -67,9 +68,12 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
     }
 
     @Override
-    public CurriculoDocumentoParseResponse extraerCurriculo(String contenidoChunk) {
+    public CurriculoDocumentoParseResponse extraerCurriculo(String contenidoChunk, DocumentoCurriculoTipo tipoDocumento) {
         if (apiKey.isBlank()) {
             throw new BusinessRuleException("DEEPSEEK_API_KEY no esta configurada para procesar el documento curricular");
+        }
+        if (tipoDocumento == null) {
+            throw new BusinessRuleException("El tipo del documento curricular es obligatorio para procesar la ingesta");
         }
         if (contenidoChunk == null || contenidoChunk.isBlank()) {
             throw new BusinessRuleException("El contenido del chunk curricular es obligatorio");
@@ -78,7 +82,7 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", model);
         payload.put("temperature", 0.1);
-        payload.put("messages", buildMessages(contenidoChunk));
+        payload.put("messages", buildMessages(contenidoChunk, tipoDocumento));
         payload.put("response_format", Map.of("type", "json_object"));
 
         JsonNode response = null;
@@ -197,14 +201,18 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
         throw new ExternalServiceException(HttpStatus.BAD_GATEWAY, "No fue posible completar la solicitud a DeepSeek", null);
     }
 
-    private Object buildMessages(String contenidoChunk) {
+    private Object buildMessages(String contenidoChunk, DocumentoCurriculoTipo tipoDocumento) {
         StringBuilder userPrompt = new StringBuilder();
         userPrompt.append("Actua como especialista en el Curriculo Nacional del Peru. ");
+        userPrompt.append("El documento registrado es de tipo ")
+            .append(tipoDocumento.getDatabaseValue())
+            .append(". ");
         userPrompt.append("Analiza un fragmento del documento curricular y responde solo JSON valido con esta estructura exacta: ");
         userPrompt.append("{\"items\":[{\"area\":\"\",\"competencia\":\"\",\"capacidades\":[\"\"],\"desempenos\":[\"\"],");
         userPrompt.append("\"nivel\":\"\",\"grado\":\"\",\"ciclo\":\"\",\"confianza\":0.0}]}. ");
         userPrompt.append("Cada item representa una unidad curricular identificable en el texto. ");
         userPrompt.append("No inventes informacion. Usa cadenas vacias o listas vacias cuando el dato no aparezca en el fragmento. ");
+        appendExtractionRules(userPrompt, tipoDocumento);
         userPrompt.append("Si no hay informacion curricular util, responde {\"items\":[]}. ");
         userPrompt.append("Contenido del chunk:\n").append(contenidoChunk);
 
@@ -218,6 +226,19 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
                 "content", userPrompt.toString()
             )
         );
+    }
+
+    private void appendExtractionRules(StringBuilder userPrompt, DocumentoCurriculoTipo tipoDocumento) {
+        if (tipoDocumento == DocumentoCurriculoTipo.CURRICULO) {
+            userPrompt.append("Como es Curriculo Nacional, extrae solo area, competencia, capacidades, nivel y ciclo si aparecen. ");
+            userPrompt.append("No extraigas desempenos desde este documento; el campo desempenos debe ser una lista vacia. ");
+            userPrompt.append("No confundas estandares por ciclo con desempenos por grado. ");
+            return;
+        }
+
+        userPrompt.append("Como es Programa Curricular, extrae desempenos oficiales por grado. ");
+        userPrompt.append("Incluye area, competencia, nivel, grado y ciclo cuando aparezcan para poder vincular el desempeno. ");
+        userPrompt.append("No extraigas ni inventes capacidades desde este documento; el campo capacidades debe ser una lista vacia. ");
     }
 
     String extractContent(JsonNode response) {

@@ -15,6 +15,7 @@ import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 import lombok.RequiredArgsConstructor;
@@ -48,7 +49,7 @@ public class ProcesarDocumentoCurriculoService {
 
             List<PaginaPdfTexto> pages = pdfTextExtractorService.extractPages(archivoPdf);
             List<DocumentoChunkContenido> chunks = documentoCurriculoChunkerService.chunk(pages);
-            List<DocumentoChunkAnalizado> analisisChunks = analyzeChunks(chunks);
+            List<DocumentoChunkAnalizado> analisisChunks = analyzeChunks(chunks, documento.getTipo());
 
             poblarCurriculoDesdeDocumentoService.execute(documentoCurriculoId, checksumSha256, analisisChunks);
             DocumentoCurriculo actualizado = referenceResolver.findDocumentoCurriculo(documentoCurriculoId);
@@ -59,12 +60,17 @@ public class ProcesarDocumentoCurriculoService {
         }
     }
 
-    private List<DocumentoChunkAnalizado> analyzeChunks(List<DocumentoChunkContenido> chunks) {
+    private List<DocumentoChunkAnalizado> analyzeChunks(List<DocumentoChunkContenido> chunks, DocumentoCurriculoTipo tipoDocumento) {
+        if (tipoDocumento == null) {
+            throw new BusinessRuleException("El tipo del documento curricular es obligatorio para procesar la ingesta");
+        }
+
         List<DocumentoChunkAnalizado> analisis = new ArrayList<>();
 
         for (DocumentoChunkContenido chunk : chunks) {
             LOGGER.info(
-                "Procesando chunk curricular. orden={}, paginas={}..{}, hash={}, contenidoPreview={}",
+                "Procesando chunk curricular. tipo={}, orden={}, paginas={}..{}, hash={}, contenidoPreview={}",
+                tipoDocumento.getDatabaseValue(),
                 chunk.orden(),
                 chunk.paginaInicio(),
                 chunk.paginaFin(),
@@ -72,13 +78,19 @@ public class ProcesarDocumentoCurriculoService {
                 abbreviate(chunk.contenido())
             );
             try {
-                CurriculoDocumentoParseResponse response = curriculoLlmClient.extraerCurriculo(chunk.contenido());
+                CurriculoDocumentoParseResponse response = curriculoLlmClient.extraerCurriculo(chunk.contenido(), tipoDocumento);
                 int itemsCount = response == null || response.getItems() == null ? 0 : response.getItems().size();
-                LOGGER.info("Chunk curricular procesado correctamente. orden={}, itemsExtraidos={}", chunk.orden(), itemsCount);
+                LOGGER.info(
+                    "Chunk curricular procesado correctamente. tipo={}, orden={}, itemsExtraidos={}",
+                    tipoDocumento.getDatabaseValue(),
+                    chunk.orden(),
+                    itemsCount
+                );
                 analisis.add(new DocumentoChunkAnalizado(chunk, response));
             } catch (RuntimeException exception) {
                 LOGGER.error(
-                    "Fallo la interpretacion de un chunk curricular. orden={}, paginas={}..{}, hash={}",
+                    "Fallo la interpretacion de un chunk curricular. tipo={}, orden={}, paginas={}..{}, hash={}",
+                    tipoDocumento.getDatabaseValue(),
                     chunk.orden(),
                     chunk.paginaInicio(),
                     chunk.paginaFin(),

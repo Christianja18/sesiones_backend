@@ -13,6 +13,9 @@ import lombok.NoArgsConstructor;
 public class RegisterDocumentoCurriculoRequest {
 
     @NotBlank
+    private String tipo;
+
+    @NotBlank
     private String nombreArchivo;
 
     @NotBlank

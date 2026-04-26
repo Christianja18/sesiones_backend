@@ -1,7 +1,7 @@
 package com.sesiones.sesiones_backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -29,6 +29,7 @@ import com.sesiones.sesiones_backend.entity.DocumentoChunkClasificacion;
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
+import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.repository.AreaRepository;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.CicloRepository;
@@ -39,6 +40,7 @@ import com.sesiones.sesiones_backend.repository.DocumentoChunkRepository;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
 import com.sesiones.sesiones_backend.repository.GradoRepository;
 import com.sesiones.sesiones_backend.repository.NivelEducativoRepository;
+import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 @ExtendWith(MockitoExtension.class)
@@ -78,45 +80,14 @@ class PoblarCurriculoDesdeDocumentoServiceTest {
     private PoblarCurriculoDesdeDocumentoService poblarCurriculoDesdeDocumentoService;
 
     @Test
-    void shouldPopulateCurriculumEntitiesFromChunkAnalysis() {
-        DocumentoCurriculo documento = new DocumentoCurriculo();
-        documento.setId(7);
-        documento.setNombreArchivo("curriculo.pdf");
-        documento.setArchivoUrl("https://example.com/curriculo.pdf");
-        documento.setEstado(ProcesamientoEstado.PROCESANDO);
-
-        NivelEducativo nivel = new NivelEducativo();
-        nivel.setId(1);
-        nivel.setNombre("Primaria");
-
-        Ciclo ciclo = new Ciclo();
-        ciclo.setId("III");
-        ciclo.setNombre("Ciclo III");
-
-        Grado grado = new Grado();
-        grado.setId(2);
-        grado.setNombre("1ro");
-        grado.setNivel(nivel);
-        grado.setCiclo(ciclo);
-
-        Area area = new Area();
-        area.setId(3);
-        area.setNombre("Matematica");
-
-        CurriculoDocumentoParseResponse response = buildResponse();
-        DocumentoChunkContenido chunk = new DocumentoChunkContenido(
-            1,
-            1,
-            2,
-            "contenido del chunk",
-            "hash-chunk"
-        );
+    void shouldPopulateCompetenciasAndCapacidadesFromCurriculoDocument() {
+        DocumentoCurriculo documento = buildDocumento(7, DocumentoCurriculoTipo.CURRICULO);
+        Area area = buildArea();
+        CurriculoDocumentoParseResponse response = buildCurriculoResponse();
+        DocumentoChunkContenido chunk = buildChunk();
 
         when(documentoCurriculoRepository.findById(7)).thenReturn(Optional.of(documento));
-        when(nivelEducativoRepository.findAll()).thenReturn(List.of(nivel));
-        when(cicloRepository.findById("III")).thenReturn(Optional.of(ciclo));
         when(areaRepository.findAll()).thenReturn(List.of(area));
-        when(gradoRepository.findByNivelIdAndNombreIgnoreCase(1, "1ro")).thenReturn(Optional.of(grado));
         when(documentoChunkRepository.save(any(DocumentoChunk.class))).thenAnswer(invocation -> {
             DocumentoChunk saved = invocation.getArgument(0);
             saved.setId(11);
@@ -131,19 +102,15 @@ class PoblarCurriculoDesdeDocumentoServiceTest {
         when(capacidadRepository.findByCompetenciaIdAndDescripcion(4, "Traduce cantidades a expresiones numericas"))
             .thenReturn(Optional.empty());
         when(capacidadRepository.save(any(Capacidad.class))).thenAnswer(invocation -> invocation.getArgument(0));
-        when(desempenoRepository.findByGradoIdAndCompetenciaIdAndDescripcion(2, 4, "Resuelve situaciones de adicion y sustraccion"))
-            .thenReturn(Optional.empty());
-        when(desempenoRepository.save(any(Desempeno.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         poblarCurriculoDesdeDocumentoService.execute(7, "checksum-123", List.of(new DocumentoChunkAnalizado(chunk, response)));
 
+        verify(desempenoRepository, never()).save(any(Desempeno.class));
         verify(gradoRepository, never()).save(any(Grado.class));
 
         ArgumentCaptor<DocumentoChunkClasificacion> clasificacionCaptor = ArgumentCaptor.forClass(DocumentoChunkClasificacion.class);
         verify(documentoChunkClasificacionRepository).save(clasificacionCaptor.capture());
-        assertEquals("1ro", clasificacionCaptor.getValue().getGrado().getNombre());
-        assertEquals("III", clasificacionCaptor.getValue().getCiclo().getId());
         assertEquals("Matematica", clasificacionCaptor.getValue().getArea().getNombre());
 
         ArgumentCaptor<DocumentoCurriculo> documentoCaptor = ArgumentCaptor.forClass(DocumentoCurriculo.class);
@@ -153,145 +120,151 @@ class PoblarCurriculoDesdeDocumentoServiceTest {
     }
 
     @Test
-    void shouldNormalizeNivelToCanonicalValuesOnly() {
-        DocumentoCurriculo documento = new DocumentoCurriculo();
-        documento.setId(8);
-        documento.setNombreArchivo("curriculo.pdf");
-        documento.setArchivoUrl("https://example.com/curriculo.pdf");
-        documento.setEstado(ProcesamientoEstado.PROCESANDO);
-
-        NivelEducativo primaria = new NivelEducativo();
-        primaria.setId(1);
-        primaria.setNombre("Primaria");
-
-        Area area = new Area();
-        area.setId(3);
-        area.setNombre("Matematica");
-
-        CurriculoDocumentoParseResponse response = new CurriculoDocumentoParseResponse();
-
-        CurriculoDocumentoParseResponse.Item itemCanonico = new CurriculoDocumentoParseResponse.Item();
-        itemCanonico.setArea("Matematica");
-        itemCanonico.setNivel("Educación Primaria");
-        itemCanonico.setConfianza(new BigDecimal("0.81"));
-
-        CurriculoDocumentoParseResponse.Item itemBasura = new CurriculoDocumentoParseResponse.Item();
-        itemBasura.setArea("Matematica");
-        itemBasura.setNivel("Nivel 1");
-        itemBasura.setConfianza(new BigDecimal("0.20"));
-
-        response.setItems(List.of(itemCanonico, itemBasura));
-
-        DocumentoChunkContenido chunk = new DocumentoChunkContenido(
-            1,
-            1,
-            1,
-            "contenido del chunk",
-            "hash-chunk"
-        );
+    void shouldPopulateDesempenosFromProgramaDocumentUsingExistingCompetencia() {
+        DocumentoCurriculo documento = buildDocumento(8, DocumentoCurriculoTipo.PROGRAMA);
+        NivelEducativo nivel = buildNivel();
+        Ciclo ciclo = buildCiclo();
+        Grado grado = buildGrado(nivel, ciclo);
+        Area area = buildArea();
+        Competencia competencia = buildCompetencia(area);
+        CurriculoDocumentoParseResponse response = buildProgramaResponse();
+        DocumentoChunkContenido chunk = buildChunk();
 
         when(documentoCurriculoRepository.findById(8)).thenReturn(Optional.of(documento));
-        when(nivelEducativoRepository.findAll()).thenReturn(List.of(primaria));
+        when(nivelEducativoRepository.findAll()).thenReturn(List.of(nivel));
+        when(cicloRepository.findById("III")).thenReturn(Optional.of(ciclo));
+        when(gradoRepository.findByNivelIdAndNombreIgnoreCase(1, "1ro")).thenReturn(Optional.of(grado));
         when(areaRepository.findAll()).thenReturn(List.of(area));
         when(documentoChunkRepository.save(any(DocumentoChunk.class))).thenAnswer(invocation -> {
             DocumentoChunk saved = invocation.getArgument(0);
             saved.setId(12);
             return saved;
         });
+        when(competenciaRepository.findByAreaIdAndDescripcion(3, "Resuelve problemas de cantidad"))
+            .thenReturn(Optional.of(competencia));
+        when(desempenoRepository.findByGradoIdAndCompetenciaIdAndDescripcion(
+            2,
+            4,
+            "Resuelve situaciones de adicion y sustraccion"
+        )).thenReturn(Optional.empty());
+        when(desempenoRepository.save(any(Desempeno.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         poblarCurriculoDesdeDocumentoService.execute(8, "checksum-456", List.of(new DocumentoChunkAnalizado(chunk, response)));
 
-        verify(nivelEducativoRepository, never()).save(any(NivelEducativo.class));
-        verify(documentoChunkClasificacionRepository).save(argThat(clasificacion ->
-            clasificacion.getNivel() != null && "Primaria".equals(clasificacion.getNivel().getNombre())
-        ));
+        verify(competenciaRepository, never()).save(any(Competencia.class));
+        verify(capacidadRepository, never()).save(any(Capacidad.class));
+
+        ArgumentCaptor<Desempeno> desempenoCaptor = ArgumentCaptor.forClass(Desempeno.class);
+        verify(desempenoRepository).save(desempenoCaptor.capture());
+        assertEquals("Resuelve situaciones de adicion y sustraccion", desempenoCaptor.getValue().getDescripcion());
+        assertEquals(2, desempenoCaptor.getValue().getGrado().getId());
+        assertEquals(4, desempenoCaptor.getValue().getCompetencia().getId());
     }
 
     @Test
-    void shouldNotCreateGradoWhenCatalogEntryDoesNotExist() {
+    void shouldRejectProgramaWhenCompetenciaCatalogDoesNotExist() {
+        DocumentoCurriculo documento = buildDocumento(9, DocumentoCurriculoTipo.PROGRAMA);
+        NivelEducativo nivel = buildNivel();
+        Ciclo ciclo = buildCiclo();
+        Grado grado = buildGrado(nivel, ciclo);
+        Area area = buildArea();
+        CurriculoDocumentoParseResponse response = buildProgramaResponse();
+        DocumentoChunkContenido chunk = buildChunk();
+
+        when(documentoCurriculoRepository.findById(9)).thenReturn(Optional.of(documento));
+        when(nivelEducativoRepository.findAll()).thenReturn(List.of(nivel));
+        when(cicloRepository.findById("III")).thenReturn(Optional.of(ciclo));
+        when(gradoRepository.findByNivelIdAndNombreIgnoreCase(1, "1ro")).thenReturn(Optional.of(grado));
+        when(areaRepository.findAll()).thenReturn(List.of(area));
+        when(documentoChunkRepository.save(any(DocumentoChunk.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(competenciaRepository.findByAreaIdAndDescripcion(3, "Resuelve problemas de cantidad"))
+            .thenReturn(Optional.empty());
+
+        assertThrows(
+            BusinessRuleException.class,
+            () -> poblarCurriculoDesdeDocumentoService.execute(9, "checksum-789", List.of(new DocumentoChunkAnalizado(chunk, response)))
+        );
+
+        verify(competenciaRepository, never()).save(any(Competencia.class));
+        verify(desempenoRepository, never()).save(any(Desempeno.class));
+    }
+
+    private DocumentoCurriculo buildDocumento(Integer id, DocumentoCurriculoTipo tipo) {
         DocumentoCurriculo documento = new DocumentoCurriculo();
-        documento.setId(9);
+        documento.setId(id);
+        documento.setTipo(tipo);
         documento.setNombreArchivo("curriculo.pdf");
         documento.setArchivoUrl("https://example.com/curriculo.pdf");
         documento.setEstado(ProcesamientoEstado.PROCESANDO);
-
-        NivelEducativo secundaria = new NivelEducativo();
-        secundaria.setId(2);
-        secundaria.setNombre("Secundaria");
-
-        Ciclo ciclo = new Ciclo();
-        ciclo.setId("VI");
-        ciclo.setNombre("Ciclo VI");
-
-        Area area = new Area();
-        area.setId(3);
-        area.setNombre("Matematica");
-
-        CurriculoDocumentoParseResponse response = new CurriculoDocumentoParseResponse();
-        CurriculoDocumentoParseResponse.Item item = new CurriculoDocumentoParseResponse.Item();
-        item.setArea("Matematica");
-        item.setNivel("Secundaria");
-        item.setGrado("6to");
-        item.setCiclo("VI");
-        item.setCompetencia("Resuelve problemas de cantidad");
-        item.setDesempenos(List.of("Desempeno no catalogado"));
-        item.setConfianza(new BigDecimal("0.71"));
-        response.setItems(List.of(item));
-
-        DocumentoChunkContenido chunk = new DocumentoChunkContenido(
-            1,
-            1,
-            1,
-            "contenido del chunk",
-            "hash-chunk"
-        );
-
-        when(documentoCurriculoRepository.findById(9)).thenReturn(Optional.of(documento));
-        when(nivelEducativoRepository.findAll()).thenReturn(List.of(secundaria));
-        when(cicloRepository.findById("VI")).thenReturn(Optional.of(ciclo));
-        when(areaRepository.findAll()).thenReturn(List.of(area));
-        when(gradoRepository.findByNivelIdAndNombreIgnoreCase(2, "6to")).thenReturn(Optional.empty());
-        when(documentoChunkRepository.save(any(DocumentoChunk.class))).thenAnswer(invocation -> {
-            DocumentoChunk saved = invocation.getArgument(0);
-            saved.setId(13);
-            return saved;
-        });
-        when(competenciaRepository.findByAreaIdAndDescripcion(3, "Resuelve problemas de cantidad")).thenReturn(Optional.empty());
-        when(competenciaRepository.save(any(Competencia.class))).thenAnswer(invocation -> {
-            Competencia competencia = invocation.getArgument(0);
-            competencia.setId(5);
-            return competencia;
-        });
-        when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> invocation.getArgument(0));
-
-        poblarCurriculoDesdeDocumentoService.execute(9, "checksum-789", List.of(new DocumentoChunkAnalizado(chunk, response)));
-
-        verify(gradoRepository, never()).save(any(Grado.class));
-        verify(desempenoRepository, never()).save(any(Desempeno.class));
-        verify(documentoChunkClasificacionRepository).save(argThat(clasificacion ->
-            clasificacion.getGrado() == null
-                && clasificacion.getNivel() != null
-                && "Secundaria".equals(clasificacion.getNivel().getNombre())
-                && clasificacion.getCiclo() != null
-                && "VI".equals(clasificacion.getCiclo().getId())
-        ));
+        return documento;
     }
 
-    private CurriculoDocumentoParseResponse buildResponse() {
+    private CurriculoDocumentoParseResponse buildCurriculoResponse() {
         CurriculoDocumentoParseResponse response = new CurriculoDocumentoParseResponse();
-
         CurriculoDocumentoParseResponse.Item item = new CurriculoDocumentoParseResponse.Item();
         item.setArea("Matematica");
         item.setCompetencia("Resuelve problemas de cantidad");
         item.setCapacidades(List.of("Traduce cantidades a expresiones numericas"));
-        item.setDesempenos(List.of("Resuelve situaciones de adicion y sustraccion"));
+        item.setDesempenos(List.of("No debe persistirse desde curriculo nacional"));
+        item.setConfianza(new BigDecimal("0.92"));
+        response.setItems(List.of(item));
+        return response;
+    }
+
+    private CurriculoDocumentoParseResponse buildProgramaResponse() {
+        CurriculoDocumentoParseResponse response = new CurriculoDocumentoParseResponse();
+        CurriculoDocumentoParseResponse.Item item = new CurriculoDocumentoParseResponse.Item();
+        item.setArea("Matematica");
         item.setNivel("Primaria");
         item.setGrado("1ro");
         item.setCiclo("III");
-        item.setConfianza(new BigDecimal("0.92"));
-
+        item.setCompetencia("Resuelve problemas de cantidad");
+        item.setDesempenos(List.of("Resuelve situaciones de adicion y sustraccion"));
+        item.setConfianza(new BigDecimal("0.88"));
         response.setItems(List.of(item));
         return response;
+    }
+
+    private DocumentoChunkContenido buildChunk() {
+        return new DocumentoChunkContenido(1, 1, 1, "contenido del chunk", "hash-chunk");
+    }
+
+    private NivelEducativo buildNivel() {
+        NivelEducativo nivel = new NivelEducativo();
+        nivel.setId(1);
+        nivel.setNombre("Primaria");
+        return nivel;
+    }
+
+    private Ciclo buildCiclo() {
+        Ciclo ciclo = new Ciclo();
+        ciclo.setId("III");
+        ciclo.setNombre("Ciclo III");
+        return ciclo;
+    }
+
+    private Grado buildGrado(NivelEducativo nivel, Ciclo ciclo) {
+        Grado grado = new Grado();
+        grado.setId(2);
+        grado.setNombre("1ro");
+        grado.setNivel(nivel);
+        grado.setCiclo(ciclo);
+        return grado;
+    }
+
+    private Area buildArea() {
+        Area area = new Area();
+        area.setId(3);
+        area.setNombre("Matematica");
+        return area;
+    }
+
+    private Competencia buildCompetencia(Area area) {
+        Competencia competencia = new Competencia();
+        competencia.setId(4);
+        competencia.setArea(area);
+        competencia.setDescripcion("Resuelve problemas de cantidad");
+        return competencia;
     }
 }

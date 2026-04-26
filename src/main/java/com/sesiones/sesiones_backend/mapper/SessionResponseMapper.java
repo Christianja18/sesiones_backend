@@ -128,6 +128,7 @@ public class SessionResponseMapper {
 
         return DocumentoCurriculoResponse.builder()
             .id(documentoCurriculo.getId())
+            .tipo(documentoCurriculo.getTipo() == null ? null : documentoCurriculo.getTipo().getDatabaseValue())
             .nombreArchivo(documentoCurriculo.getNombreArchivo())
             .archivoUrl(documentoCurriculo.getArchivoUrl())
             .checksumSha256(documentoCurriculo.getChecksumSha256())
