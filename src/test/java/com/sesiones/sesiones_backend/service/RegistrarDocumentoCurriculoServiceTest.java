@@ -37,6 +37,7 @@ class RegistrarDocumentoCurriculoServiceTest {
     @Test
     void shouldRejectNonPdfFileNames() {
         RegisterDocumentoCurriculoRequest request = RegisterDocumentoCurriculoRequest.builder()
+            .tipo("curriculo")
             .nombreArchivo("curriculo.txt")
             .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.txt")
             .build();
@@ -48,6 +49,7 @@ class RegistrarDocumentoCurriculoServiceTest {
     @Test
     void shouldRejectDuplicatedDocumentUrl() {
         RegisterDocumentoCurriculoRequest request = RegisterDocumentoCurriculoRequest.builder()
+            .tipo("curriculo")
             .nombreArchivo("curriculo.pdf")
             .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")
             .build();
@@ -61,6 +63,7 @@ class RegistrarDocumentoCurriculoServiceTest {
     @Test
     void shouldRegisterDocumentReference() {
         RegisterDocumentoCurriculoRequest request = RegisterDocumentoCurriculoRequest.builder()
+            .tipo("curriculo")
             .nombreArchivo("curriculo.pdf")
             .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")
             .build();
@@ -74,6 +77,7 @@ class RegistrarDocumentoCurriculoServiceTest {
         when(sessionResponseMapper.toDocumentoCurriculoResponse(any(DocumentoCurriculo.class))).thenReturn(
             DocumentoCurriculoResponse.builder()
                 .id(7)
+                .tipo("curriculo")
                 .nombreArchivo("curriculo.pdf")
                 .archivoUrl("https://minedu.gob.pe/curriculo/curriculo.pdf")
                 .estado("PENDIENTE")
@@ -86,6 +90,7 @@ class RegistrarDocumentoCurriculoServiceTest {
         verify(documentoCurriculoRepository).save(captor.capture());
 
         DocumentoCurriculo savedDocumento = captor.getValue();
+        assertEquals(com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo.CURRICULO, savedDocumento.getTipo());
         assertEquals("curriculo.pdf", savedDocumento.getNombreArchivo());
         assertEquals("https://minedu.gob.pe/curriculo/curriculo.pdf", savedDocumento.getArchivoUrl());
         assertEquals(ProcesamientoEstado.PENDIENTE, savedDocumento.getEstado());

@@ -13,6 +13,7 @@ import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class RegistrarDocumentoCurriculoService {
     public DocumentoCurriculoResponse execute(RegisterDocumentoCurriculoRequest request) {
         validateRequest(request);
 
+        DocumentoCurriculoTipo tipo = parseTipo(request.getTipo());
         String nombreArchivo = normalizeFileName(request.getNombreArchivo());
         String archivoUrl = normalizeArchivoUrl(request.getArchivoUrl());
 
@@ -39,6 +41,7 @@ public class RegistrarDocumentoCurriculoService {
         }
 
         DocumentoCurriculo documentoCurriculo = new DocumentoCurriculo();
+        documentoCurriculo.setTipo(tipo);
         documentoCurriculo.setNombreArchivo(nombreArchivo);
         documentoCurriculo.setArchivoUrl(archivoUrl);
         documentoCurriculo.setEstado(ProcesamientoEstado.PENDIENTE);
@@ -89,5 +92,13 @@ public class RegistrarDocumentoCurriculoService {
 
     private String normalizeArchivoUrl(String archivoUrl) {
         return archivoUrl == null ? null : archivoUrl.trim();
+    }
+
+    private DocumentoCurriculoTipo parseTipo(String tipo) {
+        try {
+            return DocumentoCurriculoTipo.fromDatabaseValue(tipo);
+        } catch (IllegalArgumentException exception) {
+            throw new BusinessRuleException("El tipo del documento curricular debe ser curriculo o programa");
+        }
     }
 }

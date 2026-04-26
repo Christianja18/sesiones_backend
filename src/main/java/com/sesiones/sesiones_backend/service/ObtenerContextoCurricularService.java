@@ -7,7 +7,7 @@ import com.sesiones.sesiones_backend.dto.CurriculumContextResponse;
 import com.sesiones.sesiones_backend.dto.TextoReferenciaResponse;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
-import com.sesiones.sesiones_backend.service.ReferenceResolver;
+import com.sesiones.sesiones_backend.repository.EstandarAprendizajeRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -17,6 +17,7 @@ public class ObtenerContextoCurricularService {
 
     private final ReferenceResolver referenceResolver;
     private final CapacidadRepository capacidadRepository;
+    private final EstandarAprendizajeRepository estandarAprendizajeRepository;
     private final DesempenoRepository desempenoRepository;
 
     @Transactional(readOnly = true)
@@ -29,6 +30,8 @@ public class ObtenerContextoCurricularService {
         return CurriculumContextResponse.builder()
             .nivelId(nivel.getId())
             .nivelNombre(nivel.getNombre())
+            .cicloId(grado.getCiclo() == null ? null : grado.getCiclo().getId())
+            .cicloNombre(grado.getCiclo() == null ? null : grado.getCiclo().getNombre())
             .gradoId(grado.getId())
             .gradoNombre(grado.getNombre())
             .areaId(area.getId())
@@ -38,6 +41,14 @@ public class ObtenerContextoCurricularService {
             .capacidades(capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId()).stream()
                 .map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion()))
                 .toList())
+            .estandares(grado.getCiclo() == null
+                ? java.util.List.of()
+                : estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
+                    competencia.getId(),
+                    grado.getCiclo().getId()
+                ).stream()
+                    .map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion()))
+                    .toList())
             .desempenos(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(grado.getId(), competencia.getId()).stream()
                 .map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion()))
                 .toList())

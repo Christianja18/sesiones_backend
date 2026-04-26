@@ -21,6 +21,7 @@ import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
+import com.sesiones.sesiones_backend.repository.EstandarAprendizajeRepository;
 import com.sesiones.sesiones_backend.service.ReferenceResolver;
 import com.sesiones.sesiones_backend.service.TemplateSessionGeneratorService;
 
@@ -32,6 +33,9 @@ class GenerarSesionServiceTest {
 
     @Mock
     private CapacidadRepository capacidadRepository;
+
+    @Mock
+    private EstandarAprendizajeRepository estandarAprendizajeRepository;
 
     @Mock
     private DesempenoRepository desempenoRepository;
@@ -84,14 +88,14 @@ class GenerarSesionServiceTest {
         when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(List.of());
-        when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), List.of()))
+        when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), List.of(), List.of()))
             .thenReturn(expected);
 
         SesionResponse response = generarSesionService.execute(request);
 
         assertSame(expected, response);
         verify(referenceResolver).findGradoByNivel(2, 1);
-        verify(templateSessionGeneratorService).generate(request, grado, area, competencia, List.of(capacidad), List.of());
+        verify(templateSessionGeneratorService).generate(request, grado, area, competencia, List.of(capacidad), List.of(), List.of());
     }
 }
 

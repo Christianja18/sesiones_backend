@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 import jakarta.persistence.Column;
@@ -17,6 +18,9 @@ import lombok.Setter;
 @Entity
 @Table(name = "documento_curriculo")
 public class DocumentoCurriculo extends BaseEntity {
+
+    @Column(nullable = false, columnDefinition = "ENUM('curriculo','programa')")
+    private DocumentoCurriculoTipo tipo;
 
     @Column(name = "nombre_archivo", nullable = false, length = 255)
     private String nombreArchivo;

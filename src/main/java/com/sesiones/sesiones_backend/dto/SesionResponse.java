@@ -31,6 +31,9 @@ public class SesionResponse {
     private List<TextoReferenciaResponse> capacidades = new ArrayList<>();
 
     @Builder.Default
+    private List<TextoReferenciaResponse> estandares = new ArrayList<>();
+
+    @Builder.Default
     private List<TextoReferenciaResponse> desempenos = new ArrayList<>();
 
     @Builder.Default

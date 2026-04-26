@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class DocumentoCurriculoResponse {
 
     private Integer id;
+    private String tipo;
     private String nombreArchivo;
     private String archivoUrl;
     private String checksumSha256;

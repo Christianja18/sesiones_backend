@@ -16,6 +16,8 @@ public class CurriculumContextResponse {
 
     private Integer nivelId;
     private String nivelNombre;
+    private String cicloId;
+    private String cicloNombre;
     private Integer gradoId;
     private String gradoNombre;
     private Integer areaId;
@@ -25,6 +27,9 @@ public class CurriculumContextResponse {
 
     @Builder.Default
     private List<TextoReferenciaResponse> capacidades = new ArrayList<>();
+
+    @Builder.Default
+    private List<TextoReferenciaResponse> estandares = new ArrayList<>();
 
     @Builder.Default
     private List<TextoReferenciaResponse> desempenos = new ArrayList<>();
