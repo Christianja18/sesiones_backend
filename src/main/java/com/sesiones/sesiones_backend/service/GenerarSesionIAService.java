@@ -19,11 +19,13 @@ import com.sesiones.sesiones_backend.entity.Area;
 import com.sesiones.sesiones_backend.entity.Capacidad;
 import com.sesiones.sesiones_backend.entity.Competencia;
 import com.sesiones.sesiones_backend.entity.Desempeno;
+import com.sesiones.sesiones_backend.entity.EstandarAprendizaje;
 import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
+import com.sesiones.sesiones_backend.repository.EstandarAprendizajeRepository;
 import com.sesiones.sesiones_backend.util.enums.InstrumentoTipo;
 
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class GenerarSesionIAService {
     private final ReferenceResolver referenceResolver;
     private final CapacidadRepository capacidadRepository;
     private final DesempenoRepository desempenoRepository;
+    private final EstandarAprendizajeRepository estandarAprendizajeRepository;
     private final TemplateSessionGeneratorService templateSessionGeneratorService;
     private final ObjectMapper objectMapper;
 
@@ -48,11 +51,26 @@ public class GenerarSesionIAService {
         Area area = referenceResolver.findArea(request.getAreaId());
         Competencia competencia = referenceResolver.findCompetenciaByArea(request.getCompetenciaId(), request.getAreaId());
         List<Capacidad> capacidades = capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId());
+        List<EstandarAprendizaje> estandares = grado.getCiclo() == null
+            ? List.of()
+            : estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
+                competencia.getId(),
+                grado.getCiclo().getId()
+            );
         List<Desempeno> desempenos = desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(grado.getId(), competencia.getId());
 
-        GeneratedSesionContent generatedContent = generateWithRetry(request, nivel, grado, area, competencia, capacidades, desempenos);
+        GeneratedSesionContent generatedContent = generateWithRetry(
+            request,
+            nivel,
+            grado,
+            area,
+            competencia,
+            capacidades,
+            estandares,
+            desempenos
+        );
         if (generatedContent == null) {
-            return templateSessionGeneratorService.generate(request, grado, area, competencia, capacidades, desempenos);
+            return templateSessionGeneratorService.generate(request, grado, area, competencia, capacidades, estandares, desempenos);
         }
 
         return SesionResponse.builder()
@@ -62,6 +80,7 @@ public class GenerarSesionIAService {
             .generadoPorIa(true)
             .competencias(toReferenceResponses(competencia))
             .capacidades(toCapacidadResponses(capacidades))
+            .estandares(toEstandarResponses(estandares))
             .desempenos(toDesempenoResponses(desempenos))
             .actividades(generatedContent.getActividades())
             .criteriosEvaluacion(generatedContent.getCriterios())
@@ -77,6 +96,7 @@ public class GenerarSesionIAService {
         Area area,
         Competencia competencia,
         List<Capacidad> capacidades,
+        List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos
     ) {
         BusinessRuleException lastException = null;
@@ -91,6 +111,7 @@ public class GenerarSesionIAService {
                     area,
                     competencia,
                     capacidades,
+                    estandares,
                     desempenos,
                     strictRetry
                 );
@@ -102,6 +123,7 @@ public class GenerarSesionIAService {
                     competencia,
                     structure,
                     capacidades,
+                    estandares,
                     desempenos,
                     strictRetry
                 );
@@ -113,6 +135,7 @@ public class GenerarSesionIAService {
                     competencia,
                     structure,
                     capacidades,
+                    estandares,
                     desempenos,
                     strictRetry
                 );
@@ -145,10 +168,11 @@ public class GenerarSesionIAService {
         Area area,
         Competencia competencia,
         List<Capacidad> capacidades,
+        List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
         boolean strictRetry
     ) {
-        String prompt = buildStructurePrompt(request, nivel, grado, area, competencia, capacidades, desempenos, strictRetry);
+        String prompt = buildStructurePrompt(request, nivel, grado, area, competencia, capacidades, estandares, desempenos, strictRetry);
         JsonNode root = parseResponse(llmClient.generate(prompt));
 
         String titulo = readRequiredText(root, "titulo");
@@ -169,10 +193,11 @@ public class GenerarSesionIAService {
         Competencia competencia,
         StructureContent structure,
         List<Capacidad> capacidades,
+        List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
         boolean strictRetry
     ) {
-        String prompt = buildActivitiesPrompt(request, nivel, grado, area, competencia, structure, capacidades, desempenos, strictRetry);
+        String prompt = buildActivitiesPrompt(request, nivel, grado, area, competencia, structure, capacidades, estandares, desempenos, strictRetry);
         JsonNode root = parseResponse(llmClient.generate(prompt));
 
         return ActividadesSesionDto.builder()
@@ -190,10 +215,11 @@ public class GenerarSesionIAService {
         Competencia competencia,
         StructureContent structure,
         List<Capacidad> capacidades,
+        List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
         boolean strictRetry
     ) {
-        String prompt = buildEvaluationPrompt(request, nivel, grado, area, competencia, structure, capacidades, desempenos, strictRetry);
+        String prompt = buildEvaluationPrompt(request, nivel, grado, area, competencia, structure, capacidades, estandares, desempenos, strictRetry);
         JsonNode root = parseResponse(llmClient.generate(prompt));
 
         List<String> criterios = readRequiredTextArray(root, "criterios");
@@ -226,6 +252,7 @@ public class GenerarSesionIAService {
         Area area,
         Competencia competencia,
         List<Capacidad> capacidades,
+        List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
         boolean strictRetry
     ) {
@@ -241,6 +268,8 @@ public class GenerarSesionIAService {
             - Contexto: %s
             - Duracion: %s minutos
             - Capacidades de referencia:
+            %s
+            - Estandares de referencia:
             %s
             - Desempenos de referencia:
             %s
@@ -262,6 +291,7 @@ public class GenerarSesionIAService {
             request.getContexto().trim(),
             request.getDuracionMinutos(),
             joinCapacidades(capacidades),
+            joinEstandares(estandares),
             joinDesempenos(desempenos)
         );
 
@@ -286,6 +316,7 @@ public class GenerarSesionIAService {
         Competencia competencia,
         StructureContent structure,
         List<Capacidad> capacidades,
+        List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
         boolean strictRetry
     ) {
@@ -308,6 +339,8 @@ public class GenerarSesionIAService {
             - Proposito: %s
             - Capacidades de referencia:
             %s
+            - Estandares de referencia:
+            %s
             - Desempenos de referencia:
             %s
 
@@ -327,6 +360,7 @@ public class GenerarSesionIAService {
             structure.getTitulo(),
             structure.getProposito(),
             joinCapacidades(capacidades),
+            joinEstandares(estandares),
             joinDesempenos(desempenos)
         );
 
@@ -351,6 +385,7 @@ public class GenerarSesionIAService {
         Competencia competencia,
         StructureContent structure,
         List<Capacidad> capacidades,
+        List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
         boolean strictRetry
     ) {
@@ -367,6 +402,8 @@ public class GenerarSesionIAService {
             - Titulo: %s
             - Proposito: %s
             - Capacidades de referencia:
+            %s
+            - Estandares de referencia:
             %s
             - Desempenos de referencia:
             %s
@@ -390,6 +427,7 @@ public class GenerarSesionIAService {
             structure.getTitulo(),
             structure.getProposito(),
             joinCapacidades(capacidades),
+            joinEstandares(estandares),
             joinDesempenos(desempenos)
         );
 
@@ -412,6 +450,15 @@ public class GenerarSesionIAService {
         }
         return capacidades.stream()
             .map(Capacidad::getDescripcion)
+            .collect(Collectors.joining(System.lineSeparator() + "- ", "- ", ""));
+    }
+
+    private String joinEstandares(List<EstandarAprendizaje> estandares) {
+        if (estandares == null || estandares.isEmpty()) {
+            return "- no_disponible";
+        }
+        return estandares.stream()
+            .map(EstandarAprendizaje::getDescripcion)
             .collect(Collectors.joining(System.lineSeparator() + "- ", "- ", ""));
     }
 
@@ -478,6 +525,12 @@ public class GenerarSesionIAService {
 
     private List<TextoReferenciaResponse> toCapacidadResponses(List<Capacidad> capacidades) {
         return capacidades.stream()
+            .map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion()))
+            .collect(Collectors.toList());
+    }
+
+    private List<TextoReferenciaResponse> toEstandarResponses(List<EstandarAprendizaje> estandares) {
+        return estandares.stream()
             .map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion()))
             .collect(Collectors.toList());
     }

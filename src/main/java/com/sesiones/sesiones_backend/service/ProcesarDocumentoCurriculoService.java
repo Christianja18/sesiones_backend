@@ -12,10 +12,13 @@ import org.springframework.stereotype.Service;
 import com.sesiones.sesiones_backend.dto.CurriculoDocumentoParseResponse;
 import com.sesiones.sesiones_backend.dto.DocumentoCurriculoResponse;
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
+import com.sesiones.sesiones_backend.entity.IngestLog;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.repository.IngestLogRepository;
 import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
+import com.sesiones.sesiones_backend.util.enums.IngestLogEstado;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,7 @@ public class ProcesarDocumentoCurriculoService {
     private final CurriculoLlmClient curriculoLlmClient;
     private final PoblarCurriculoDesdeDocumentoService poblarCurriculoDesdeDocumentoService;
     private final SessionResponseMapper sessionResponseMapper;
+    private final IngestLogRepository ingestLogRepository;
 
     public DocumentoCurriculoResponse execute(Integer documentoCurriculoId) {
         DocumentoCurriculo documento = referenceResolver.findDocumentoCurriculo(documentoCurriculoId);
@@ -116,7 +120,11 @@ public class ProcesarDocumentoCurriculoService {
         documento.setEstado(ProcesamientoEstado.ERROR);
         documento.setErrorDetalle(normalizeError(errorDetalle));
         documento.setFechaProcesado(LocalDateTime.now());
-        documentoCurriculoRepository.save(documento);
+        DocumentoCurriculo savedDocumento = documentoCurriculoRepository.save(documento);
+        if (savedDocumento == null) {
+            savedDocumento = documento;
+        }
+        saveDocumentErrorLog(savedDocumento, documento.getErrorDetalle());
     }
 
     private String normalizeError(String errorDetalle) {
@@ -138,6 +146,14 @@ public class ProcesarDocumentoCurriculoService {
         } catch (Exception exception) {
             throw new BusinessRuleException("No fue posible calcular la huella del documento curricular");
         }
+    }
+
+    private void saveDocumentErrorLog(DocumentoCurriculo documento, String errorDetalle) {
+        IngestLog log = new IngestLog();
+        log.setDocumento(documento);
+        log.setEstado(IngestLogEstado.ERROR);
+        log.setMensaje(errorDetalle);
+        ingestLogRepository.save(log);
     }
 
     private String abbreviate(String value) {

@@ -203,42 +203,57 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
 
     private Object buildMessages(String contenidoChunk, DocumentoCurriculoTipo tipoDocumento) {
         StringBuilder userPrompt = new StringBuilder();
-        userPrompt.append("Actua como especialista en el Curriculo Nacional del Peru. ");
-        userPrompt.append("El documento registrado es de tipo ")
+        userPrompt.append("Actua como especialista en documentos curriculares oficiales del MINEDU Peru. ");
+        userPrompt.append("Estas procesando un fragmento de un documento curricular oficial. ");
+        userPrompt.append("Tipo de documento registrado: ")
             .append(tipoDocumento.getDatabaseValue())
             .append(". ");
-        userPrompt.append("Analiza un fragmento del documento curricular y responde solo JSON valido con esta estructura exacta: ");
-        userPrompt.append("{\"items\":[{\"area\":\"\",\"competencia\":\"\",\"capacidades\":[\"\"],\"desempenos\":[\"\"],");
+        userPrompt.append("Extrae informacion curricular estructurada sin inventar datos. ");
+        userPrompt.append("Reglas importantes: ");
+        userPrompt.append("1. Si el tipo es 'curriculo', extrae area, competencia, capacidades, estandares por ciclo, nivel y ciclo; desempenos debe ser []. ");
+        userPrompt.append("2. Si el tipo es 'programa', extrae area, competencia, capacidades, estandares por ciclo, desempenos por grado, nivel, grado y ciclo. ");
+        userPrompt.append("3. No mezclar areas, competencias, ciclos o grados diferentes en un mismo item. ");
+        userPrompt.append("4. Cada item debe representar una unidad curricular coherente. ");
+        userPrompt.append("5. No duplicar capacidades, estandares ni desempenos dentro del mismo item. ");
+        userPrompt.append("6. Mantener el texto oficial literal o lo mas cercano posible; no resumir ni reinterpretar. ");
+        userPrompt.append("7. Si un campo no existe en el fragmento, usar cadena vacia o lista vacia. ");
+        userPrompt.append("8. No inventar grado; si aparece como Primer grado, Segundo grado, etc., normalizalo a 1ro, 2do, 3ero, 4to, 5to o 6to. ");
+        userPrompt.append("9. Normaliza ciclo a III, IV, V, VI o VII cuando aparezca. ");
+        userPrompt.append("10. confianza debe estar entre 0.0 y 1.0 segun claridad del fragmento. ");
+        userPrompt.append("Devuelve unicamente JSON valido con esta estructura exacta: ");
+        userPrompt.append("{\"items\":[{\"area\":\"\",\"competencia\":\"\",\"capacidades\":[\"\"],\"estandares\":[\"\"],\"desempenos\":[\"\"],");
         userPrompt.append("\"nivel\":\"\",\"grado\":\"\",\"ciclo\":\"\",\"confianza\":0.0}]}. ");
-        userPrompt.append("Cada item representa una unidad curricular identificable en el texto. ");
-        userPrompt.append("No inventes informacion. Usa cadenas vacias o listas vacias cuando el dato no aparezca en el fragmento. ");
         appendExtractionRules(userPrompt, tipoDocumento);
         userPrompt.append("Si no hay informacion curricular util, responde {\"items\":[]}. ");
         userPrompt.append("Contenido del chunk:\n").append(contenidoChunk);
 
-        return java.util.List.of(
+        return List.of(
             Map.of(
-                "role", "system",
-                "content", "Eres un asistente experto en curriculo peruano. Extraes datos curriculares y respondes solo JSON valido."
+                "role",
+                "system",
+                "content",
+                "Eres experto en curriculo peruano. Extraes datos curriculares y respondes solo JSON valido."
             ),
             Map.of(
-                "role", "user",
-                "content", userPrompt.toString()
+                "role",
+                "user",
+                "content",
+                userPrompt.toString()
             )
         );
     }
 
     private void appendExtractionRules(StringBuilder userPrompt, DocumentoCurriculoTipo tipoDocumento) {
         if (tipoDocumento == DocumentoCurriculoTipo.CURRICULO) {
-            userPrompt.append("Como es Curriculo Nacional, extrae solo area, competencia, capacidades, nivel y ciclo si aparecen. ");
-            userPrompt.append("No extraigas desempenos desde este documento; el campo desempenos debe ser una lista vacia. ");
+            userPrompt.append("Para Curriculo Nacional: competencias, capacidades y estandares son la informacion principal. ");
+            userPrompt.append("No extraigas desempenos desde Curriculo Nacional; desempenos debe ser []. ");
             userPrompt.append("No confundas estandares por ciclo con desempenos por grado. ");
             return;
         }
 
-        userPrompt.append("Como es Programa Curricular, extrae desempenos oficiales por grado. ");
-        userPrompt.append("Incluye area, competencia, nivel, grado y ciclo cuando aparezcan para poder vincular el desempeno. ");
-        userPrompt.append("No extraigas ni inventes capacidades desde este documento; el campo capacidades debe ser una lista vacia. ");
+        userPrompt.append("Para Programa Curricular: el documento puede traer area, competencia, capacidades, estandares y desempenos. ");
+        userPrompt.append("Extrae desempenos oficiales por grado solo cuando el grado este visible en el fragmento. ");
+        userPrompt.append("Incluye capacidades y estandares de la misma competencia cuando aparezcan en el fragmento para poder relacionar el desempeno. ");
     }
 
     String extractContent(JsonNode response) {
@@ -300,7 +315,7 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
                 continue;
             }
 
-            if (builder.length() > 0) {
+            if (!builder.isEmpty()) {
                 builder.append('\n');
             }
             builder.append(text);
@@ -330,17 +345,14 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
                 escaped = false;
                 continue;
             }
-
             if (current == '\\') {
                 escaped = true;
                 continue;
             }
-
             if (current == '"') {
                 inString = !inString;
                 continue;
             }
-
             if (inString) {
                 continue;
             }
@@ -349,7 +361,6 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
                 stack.add(current);
                 continue;
             }
-
             if ((current == '}' || current == ']') && !stack.isEmpty()) {
                 char expected = current == '}' ? '{' : '[';
                 char last = stack.get(stack.size() - 1);

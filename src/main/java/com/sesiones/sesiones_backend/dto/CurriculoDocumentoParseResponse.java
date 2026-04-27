@@ -23,6 +23,7 @@ public class CurriculoDocumentoParseResponse {
         private String area;
         private String competencia;
         private List<String> capacidades = new ArrayList<>();
+        private List<String> estandares = new ArrayList<>();
         private List<String> desempenos = new ArrayList<>();
         private String nivel;
         private String grado;

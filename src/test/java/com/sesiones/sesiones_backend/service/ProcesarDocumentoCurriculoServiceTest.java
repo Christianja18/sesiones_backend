@@ -22,6 +22,7 @@ import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
 import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.repository.IngestLogRepository;
 import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
 
@@ -51,6 +52,9 @@ class ProcesarDocumentoCurriculoServiceTest {
 
     @Mock
     private SessionResponseMapper sessionResponseMapper;
+
+    @Mock
+    private IngestLogRepository ingestLogRepository;
 
     @InjectMocks
     private ProcesarDocumentoCurriculoService procesarDocumentoCurriculoService;

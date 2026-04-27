@@ -29,6 +29,7 @@ import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
+import com.sesiones.sesiones_backend.repository.EstandarAprendizajeRepository;
 
 @ExtendWith(MockitoExtension.class)
 class GenerarSesionIAServiceTest {
@@ -46,6 +47,9 @@ class GenerarSesionIAServiceTest {
     private DesempenoRepository desempenoRepository;
 
     @Mock
+    private EstandarAprendizajeRepository estandarAprendizajeRepository;
+
+    @Mock
     private TemplateSessionGeneratorService templateSessionGeneratorService;
 
     private GenerarSesionIAService generarSesionIAService;
@@ -57,6 +61,7 @@ class GenerarSesionIAServiceTest {
             referenceResolver,
             capacidadRepository,
             desempenoRepository,
+            estandarAprendizajeRepository,
             templateSessionGeneratorService,
             new ObjectMapper()
         );
@@ -134,7 +139,7 @@ class GenerarSesionIAServiceTest {
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(Collections.emptyList());
         when(llmClient.generate(anyString())).thenReturn("no-json", "no-json");
-        when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), Collections.emptyList()))
+        when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), Collections.emptyList(), Collections.emptyList()))
             .thenReturn(fallbackResponse);
 
         SesionResponse response = generarSesionIAService.execute(request);

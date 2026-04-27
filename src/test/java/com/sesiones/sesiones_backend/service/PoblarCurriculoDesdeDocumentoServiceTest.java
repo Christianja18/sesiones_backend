@@ -1,9 +1,9 @@
 package com.sesiones.sesiones_backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,9 +27,9 @@ import com.sesiones.sesiones_backend.entity.Desempeno;
 import com.sesiones.sesiones_backend.entity.DocumentoChunk;
 import com.sesiones.sesiones_backend.entity.DocumentoChunkClasificacion;
 import com.sesiones.sesiones_backend.entity.DocumentoCurriculo;
+import com.sesiones.sesiones_backend.entity.EstandarAprendizaje;
 import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
-import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.repository.AreaRepository;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.CicloRepository;
@@ -38,7 +38,9 @@ import com.sesiones.sesiones_backend.repository.DesempenoRepository;
 import com.sesiones.sesiones_backend.repository.DocumentoChunkClasificacionRepository;
 import com.sesiones.sesiones_backend.repository.DocumentoChunkRepository;
 import com.sesiones.sesiones_backend.repository.DocumentoCurriculoRepository;
+import com.sesiones.sesiones_backend.repository.EstandarAprendizajeRepository;
 import com.sesiones.sesiones_backend.repository.GradoRepository;
+import com.sesiones.sesiones_backend.repository.IngestLogRepository;
 import com.sesiones.sesiones_backend.repository.NivelEducativoRepository;
 import com.sesiones.sesiones_backend.util.enums.DocumentoCurriculoTipo;
 import com.sesiones.sesiones_backend.util.enums.ProcesamientoEstado;
@@ -74,7 +76,13 @@ class PoblarCurriculoDesdeDocumentoServiceTest {
     private CapacidadRepository capacidadRepository;
 
     @Mock
+    private EstandarAprendizajeRepository estandarAprendizajeRepository;
+
+    @Mock
     private DesempenoRepository desempenoRepository;
+
+    @Mock
+    private IngestLogRepository ingestLogRepository;
 
     @InjectMocks
     private PoblarCurriculoDesdeDocumentoService poblarCurriculoDesdeDocumentoService;
@@ -163,7 +171,94 @@ class PoblarCurriculoDesdeDocumentoServiceTest {
     }
 
     @Test
-    void shouldRejectProgramaWhenCompetenciaCatalogDoesNotExist() {
+    void shouldPopulateEstandaresFromCurriculoDocument() {
+        DocumentoCurriculo documento = buildDocumento(10, DocumentoCurriculoTipo.CURRICULO);
+        NivelEducativo nivel = buildNivel();
+        Ciclo ciclo = buildCiclo();
+        Area area = buildArea();
+        Competencia competencia = buildCompetencia(area);
+        CurriculoDocumentoParseResponse response = new CurriculoDocumentoParseResponse();
+        CurriculoDocumentoParseResponse.Item item = new CurriculoDocumentoParseResponse.Item();
+        item.setArea("Matematica");
+        item.setNivel("Primaria");
+        item.setCiclo("III");
+        item.setCompetencia("Resuelve problemas de cantidad");
+        item.setEstandares(List.of("Resuelve problemas referidos a acciones de juntar y separar cantidades"));
+        response.setItems(List.of(item));
+        DocumentoChunkContenido chunk = buildChunk();
+
+        when(documentoCurriculoRepository.findById(10)).thenReturn(Optional.of(documento));
+        when(nivelEducativoRepository.findAll()).thenReturn(List.of(nivel));
+        when(cicloRepository.findById("III")).thenReturn(Optional.of(ciclo));
+        when(areaRepository.findAll()).thenReturn(List.of(area));
+        when(documentoChunkRepository.save(any(DocumentoChunk.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(competenciaRepository.findByAreaIdAndDescripcion(3, "Resuelve problemas de cantidad"))
+            .thenReturn(Optional.of(competencia));
+        when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdAndDescripcion(
+            4,
+            "III",
+            "Resuelve problemas referidos a acciones de juntar y separar cantidades"
+        )).thenReturn(Optional.empty());
+        when(estandarAprendizajeRepository.save(any(EstandarAprendizaje.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        poblarCurriculoDesdeDocumentoService.execute(10, "checksum-estandar", List.of(new DocumentoChunkAnalizado(chunk, response)));
+
+        ArgumentCaptor<EstandarAprendizaje> estandarCaptor = ArgumentCaptor.forClass(EstandarAprendizaje.class);
+        verify(estandarAprendizajeRepository).save(estandarCaptor.capture());
+        assertEquals("III", estandarCaptor.getValue().getCiclo().getId());
+        assertEquals(4, estandarCaptor.getValue().getCompetencia().getId());
+    }
+
+    @Test
+    void shouldLinkProgramaDesempenoWithCapacidadAndEstandar() {
+        DocumentoCurriculo documento = buildDocumento(11, DocumentoCurriculoTipo.PROGRAMA);
+        NivelEducativo nivel = buildNivel();
+        Ciclo ciclo = buildCiclo();
+        Grado grado = buildGrado(nivel, ciclo);
+        Area area = buildArea();
+        Competencia competencia = buildCompetencia(area);
+        Capacidad capacidad = buildCapacidad(competencia);
+        EstandarAprendizaje estandar = buildEstandar(competencia, ciclo);
+        CurriculoDocumentoParseResponse response = buildProgramaResponse();
+        response.getItems().get(0).setCapacidades(List.of("Traduce cantidades a expresiones numericas"));
+        response.getItems().get(0).setEstandares(List.of("Estandar del ciclo III"));
+        DocumentoChunkContenido chunk = buildChunk();
+
+        when(documentoCurriculoRepository.findById(11)).thenReturn(Optional.of(documento));
+        when(nivelEducativoRepository.findAll()).thenReturn(List.of(nivel));
+        when(cicloRepository.findById("III")).thenReturn(Optional.of(ciclo));
+        when(gradoRepository.findByNivelIdAndNombreIgnoreCase(1, "1ro")).thenReturn(Optional.of(grado));
+        when(areaRepository.findAll()).thenReturn(List.of(area));
+        when(documentoChunkRepository.save(any(DocumentoChunk.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(competenciaRepository.findByAreaIdAndDescripcion(3, "Resuelve problemas de cantidad"))
+            .thenReturn(Optional.of(competencia));
+        when(capacidadRepository.findByCompetenciaIdAndDescripcion(4, "Traduce cantidades a expresiones numericas"))
+            .thenReturn(Optional.of(capacidad));
+        when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdAndDescripcion(4, "III", "Estandar del ciclo III"))
+            .thenReturn(Optional.of(estandar));
+        when(desempenoRepository.findByGradoIdAndCompetenciaIdAndDescripcion(
+            2,
+            4,
+            "Resuelve situaciones de adicion y sustraccion"
+        )).thenReturn(Optional.empty());
+        when(desempenoRepository.save(any(Desempeno.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        poblarCurriculoDesdeDocumentoService.execute(11, "checksum-relaciones", List.of(new DocumentoChunkAnalizado(chunk, response)));
+
+        ArgumentCaptor<Desempeno> desempenoCaptor = ArgumentCaptor.forClass(Desempeno.class);
+        verify(desempenoRepository, times(2)).save(desempenoCaptor.capture());
+        List<Desempeno> savedDesempenos = desempenoCaptor.getAllValues();
+        Desempeno linkedDesempeno = savedDesempenos.get(savedDesempenos.size() - 1);
+        assertEquals(1, linkedDesempeno.getCapacidades().size());
+        assertEquals(1, linkedDesempeno.getEstandares().size());
+        assertEquals("Traduce cantidades a expresiones numericas", linkedDesempeno.getCapacidades().get(0).getDescripcion());
+        assertEquals("Estandar del ciclo III", linkedDesempeno.getEstandares().get(0).getDescripcion());
+    }
+
+    @Test
+    void shouldPopulateProgramaWhenCompetenciaCatalogDoesNotExist() {
         DocumentoCurriculo documento = buildDocumento(9, DocumentoCurriculoTipo.PROGRAMA);
         NivelEducativo nivel = buildNivel();
         Ciclo ciclo = buildCiclo();
@@ -180,14 +275,23 @@ class PoblarCurriculoDesdeDocumentoServiceTest {
         when(documentoChunkRepository.save(any(DocumentoChunk.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(competenciaRepository.findByAreaIdAndDescripcion(3, "Resuelve problemas de cantidad"))
             .thenReturn(Optional.empty());
+        when(competenciaRepository.save(any(Competencia.class))).thenAnswer(invocation -> {
+            Competencia competencia = invocation.getArgument(0);
+            competencia.setId(4);
+            return competencia;
+        });
+        when(desempenoRepository.findByGradoIdAndCompetenciaIdAndDescripcion(
+            2,
+            4,
+            "Resuelve situaciones de adicion y sustraccion"
+        )).thenReturn(Optional.empty());
+        when(desempenoRepository.save(any(Desempeno.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(documentoCurriculoRepository.save(any(DocumentoCurriculo.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertThrows(
-            BusinessRuleException.class,
-            () -> poblarCurriculoDesdeDocumentoService.execute(9, "checksum-789", List.of(new DocumentoChunkAnalizado(chunk, response)))
-        );
+        poblarCurriculoDesdeDocumentoService.execute(9, "checksum-789", List.of(new DocumentoChunkAnalizado(chunk, response)));
 
-        verify(competenciaRepository, never()).save(any(Competencia.class));
-        verify(desempenoRepository, never()).save(any(Desempeno.class));
+        verify(competenciaRepository).save(any(Competencia.class));
+        verify(desempenoRepository).save(any(Desempeno.class));
     }
 
     private DocumentoCurriculo buildDocumento(Integer id, DocumentoCurriculoTipo tipo) {
@@ -266,5 +370,22 @@ class PoblarCurriculoDesdeDocumentoServiceTest {
         competencia.setArea(area);
         competencia.setDescripcion("Resuelve problemas de cantidad");
         return competencia;
+    }
+
+    private Capacidad buildCapacidad(Competencia competencia) {
+        Capacidad capacidad = new Capacidad();
+        capacidad.setId(5);
+        capacidad.setCompetencia(competencia);
+        capacidad.setDescripcion("Traduce cantidades a expresiones numericas");
+        return capacidad;
+    }
+
+    private EstandarAprendizaje buildEstandar(Competencia competencia, Ciclo ciclo) {
+        EstandarAprendizaje estandar = new EstandarAprendizaje();
+        estandar.setId(6);
+        estandar.setCompetencia(competencia);
+        estandar.setCiclo(ciclo);
+        estandar.setDescripcion("Estandar del ciclo III");
+        return estandar;
     }
 }
