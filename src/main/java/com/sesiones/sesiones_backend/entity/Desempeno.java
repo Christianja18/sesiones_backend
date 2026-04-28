@@ -33,6 +33,9 @@ public class Desempeno extends BaseEntity {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String descripcion;
 
+    @Column(name = "descripcion_hash", insertable = false, updatable = false, columnDefinition = "CHAR(64)")
+    private String descripcionHash;
+
     @Column(nullable = false, columnDefinition = "ENUM('oficial','ia')")
     private DesempenoFuente fuente = DesempenoFuente.OFICIAL;
 

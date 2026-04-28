@@ -21,4 +21,7 @@ public class Capacidad extends BaseEntity {
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String descripcion;
+
+    @Column(name = "descripcion_hash", insertable = false, updatable = false, columnDefinition = "CHAR(64)")
+    private String descripcionHash;
 }

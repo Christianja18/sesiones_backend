@@ -1,6 +1,7 @@
 package com.sesiones.sesiones_backend.service;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,6 +15,8 @@ import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 @Service
 public class PdfTextExtractorService {
 
+    private static final int PDF_HEADER_SCAN_LIMIT = 1024;
+
     public String extractText(byte[] archivoPdf) {
         return extractPages(archivoPdf).stream()
             .map(PaginaPdfTexto::contenido)
@@ -24,6 +27,11 @@ public class PdfTextExtractorService {
     public List<PaginaPdfTexto> extractPages(byte[] archivoPdf) {
         if (archivoPdf == null || archivoPdf.length == 0) {
             throw new BusinessRuleException("El contenido del archivo PDF es obligatorio");
+        }
+        if (!hasPdfHeader(archivoPdf)) {
+            throw new BusinessRuleException(
+                "El archivo descargado no es un PDF valido. Verifica que archivo_url apunte directamente a un archivo .pdf"
+            );
         }
 
         try (PDDocument documento = Loader.loadPDF(archivoPdf)) {
@@ -46,12 +54,26 @@ public class PdfTextExtractorService {
             }
 
             if (pages.isEmpty()) {
-                throw new BusinessRuleException("No fue posible extraer texto util del PDF curricular");
+                throw new BusinessRuleException(
+                    "No fue posible extraer texto util del PDF curricular. El documento tiene "
+                        + totalPaginas
+                        + " pagina(s), pero no contiene capa de texto extraible. Usa un PDF con texto seleccionable"
+                );
             }
 
             return pages;
         } catch (IOException exception) {
-            throw new BusinessRuleException("No fue posible leer el PDF curricular");
+            throw new BusinessRuleException("No fue posible leer el PDF curricular. Verifica que el archivo no este corrupto o protegido");
         }
+    }
+
+    private boolean hasPdfHeader(byte[] content) {
+        int limit = Math.min(content.length, PDF_HEADER_SCAN_LIMIT);
+        if (limit < 5) {
+            return false;
+        }
+
+        String prefix = new String(content, 0, limit, StandardCharsets.ISO_8859_1);
+        return prefix.contains("%PDF-");
     }
 }

@@ -1,12 +1,17 @@
 package com.sesiones.sesiones_backend.service;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -427,47 +432,65 @@ public class PoblarCurriculoDesdeDocumentoService {
     }
 
     private Competencia findOrCreateCompetencia(Area area, String descripcion) {
-        return competenciaRepository.findByAreaIdAndDescripcion(area.getId(), descripcion)
-            .orElseGet(() -> {
-                Competencia competencia = new Competencia();
-                competencia.setArea(area);
-                competencia.setDescripcion(descripcion);
-                return competenciaRepository.save(competencia);
-            });
+        String descripcionHash = hashNormalizedText(descripcion);
+        Optional<Competencia> existing = competenciaRepository.findByAreaIdAndDescripcionHash(area.getId(), descripcionHash);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        competenciaRepository.upsertByAreaAndDescripcion(area.getId(), descripcion);
+        return competenciaRepository.findByAreaIdAndDescripcionHash(area.getId(), descripcionHash)
+            .orElseThrow(() -> new IllegalStateException("No fue posible crear o encontrar competencia curricular"));
     }
 
     private Capacidad findOrCreateCapacidad(Competencia competencia, String descripcion) {
-        return capacidadRepository.findByCompetenciaIdAndDescripcion(competencia.getId(), descripcion)
-            .orElseGet(() -> {
-                Capacidad capacidad = new Capacidad();
-                capacidad.setCompetencia(competencia);
-                capacidad.setDescripcion(descripcion);
-                return capacidadRepository.save(capacidad);
-            });
+        String descripcionHash = hashNormalizedText(descripcion);
+        Optional<Capacidad> existing = capacidadRepository.findByCompetenciaIdAndDescripcionHash(competencia.getId(), descripcionHash);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        capacidadRepository.upsertByCompetenciaAndDescripcion(competencia.getId(), descripcion);
+        return capacidadRepository.findByCompetenciaIdAndDescripcionHash(competencia.getId(), descripcionHash)
+            .orElseThrow(() -> new IllegalStateException("No fue posible crear o encontrar capacidad curricular"));
     }
 
     private EstandarAprendizaje findOrCreateEstandar(Competencia competencia, Ciclo ciclo, String descripcion) {
+        String descripcionHash = hashNormalizedText(descripcion);
+        Optional<EstandarAprendizaje> existing = estandarAprendizajeRepository
+            .findByCompetenciaIdAndCicloIdAndDescripcionHash(competencia.getId(), ciclo.getId(), descripcionHash);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        estandarAprendizajeRepository.upsertByCompetenciaCicloAndDescripcion(competencia.getId(), ciclo.getId(), descripcion);
         return estandarAprendizajeRepository
-            .findByCompetenciaIdAndCicloIdAndDescripcion(competencia.getId(), ciclo.getId(), descripcion)
-            .orElseGet(() -> {
-                EstandarAprendizaje estandar = new EstandarAprendizaje();
-                estandar.setCompetencia(competencia);
-                estandar.setCiclo(ciclo);
-                estandar.setDescripcion(descripcion);
-                return estandarAprendizajeRepository.save(estandar);
-            });
+            .findByCompetenciaIdAndCicloIdAndDescripcionHash(competencia.getId(), ciclo.getId(), descripcionHash)
+            .orElseThrow(() -> new IllegalStateException("No fue posible crear o encontrar estandar de aprendizaje"));
     }
 
     private Desempeno findOrCreateDesempeno(Grado grado, Competencia competencia, String descripcion) {
-        return desempenoRepository.findByGradoIdAndCompetenciaIdAndDescripcion(grado.getId(), competencia.getId(), descripcion)
-            .orElseGet(() -> {
-                Desempeno desempeno = new Desempeno();
-                desempeno.setGrado(grado);
-                desempeno.setCompetencia(competencia);
-                desempeno.setDescripcion(descripcion);
-                desempeno.setFuente(DesempenoFuente.OFICIAL);
-                return desempenoRepository.save(desempeno);
-            });
+        String descripcionHash = hashNormalizedText(descripcion);
+        Optional<Desempeno> existing = desempenoRepository.findByGradoIdAndCompetenciaIdAndDescripcionHash(
+            grado.getId(),
+            competencia.getId(),
+            descripcionHash
+        );
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        desempenoRepository.upsertByGradoCompetenciaAndDescripcion(
+            grado.getId(),
+            competencia.getId(),
+            descripcion,
+            DesempenoFuente.OFICIAL.getDatabaseValue()
+        );
+        return desempenoRepository.findByGradoIdAndCompetenciaIdAndDescripcionHash(
+            grado.getId(),
+            competencia.getId(),
+            descripcionHash
+        ).orElseThrow(() -> new IllegalStateException("No fue posible crear o encontrar desempeno curricular"));
     }
 
     private boolean linkCapacidades(Desempeno desempeno, List<Capacidad> capacidades) {
@@ -667,6 +690,20 @@ public class PoblarCurriculoDesdeDocumentoService {
 
         String normalized = value.trim().replaceAll("\\s+", " ");
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String hashNormalizedText(String value) {
+        String normalized = normalizeText(value);
+        if (normalized == null) {
+            throw new IllegalArgumentException("El texto curricular no puede estar vacio");
+        }
+
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(normalized.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 no esta disponible en la JVM", e);
+        }
     }
 
     private boolean sameComparableText(String left, String right) {
