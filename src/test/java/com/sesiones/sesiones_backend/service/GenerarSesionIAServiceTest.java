@@ -15,6 +15,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -23,6 +24,7 @@ import com.sesiones.sesiones_backend.dto.GenerateSesionRequest;
 import com.sesiones.sesiones_backend.dto.SesionResponse;
 import com.sesiones.sesiones_backend.entity.Area;
 import com.sesiones.sesiones_backend.entity.Capacidad;
+import com.sesiones.sesiones_backend.entity.Ciclo;
 import com.sesiones.sesiones_backend.entity.Competencia;
 import com.sesiones.sesiones_backend.entity.Desempeno;
 import com.sesiones.sesiones_backend.entity.Grado;
@@ -82,6 +84,7 @@ class GenerarSesionIAServiceTest {
         when(referenceResolver.findArea(3)).thenReturn(area);
         when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
+        when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(4, "IV")).thenReturn(List.of());
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(List.of(desempeno));
         when(llmClient.generate(anyString())).thenReturn("""
             {
@@ -115,7 +118,12 @@ class GenerarSesionIAServiceTest {
         assertEquals(List.of("Recuperar saberes previos sobre fracciones."), response.getActividades().getInicio());
         assertEquals("rubrica", response.getInstrumentoEvaluacion().getTipo());
         assertEquals(List.of("Claridad conceptual", "Aplicacion en problemas"), response.getInstrumentoEvaluacion().getDetalle());
-        verify(llmClient, times(3)).generate(anyString());
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(llmClient, times(3)).generate(promptCaptor.capture());
+        assertTrue(promptCaptor.getAllValues().get(0).contains("- Nivel: Primaria"));
+        assertTrue(promptCaptor.getAllValues().get(0).contains("- Ciclo: IV - Ciclo IV"));
+        assertTrue(promptCaptor.getAllValues().get(0).contains("- Area: Matematica"));
+        assertTrue(promptCaptor.getAllValues().get(0).contains("- Enfoque de esta alternativa:"));
     }
 
     @Test
@@ -137,6 +145,7 @@ class GenerarSesionIAServiceTest {
         when(referenceResolver.findArea(3)).thenReturn(area);
         when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
+        when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(4, "IV")).thenReturn(Collections.emptyList());
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(Collections.emptyList());
         when(llmClient.generate(anyString())).thenReturn("no-json", "no-json");
         when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), Collections.emptyList(), Collections.emptyList()))
@@ -173,7 +182,15 @@ class GenerarSesionIAServiceTest {
         grado.setId(2);
         grado.setNombre("4to");
         grado.setNivel(nivel);
+        grado.setCiclo(buildCiclo());
         return grado;
+    }
+
+    private Ciclo buildCiclo() {
+        Ciclo ciclo = new Ciclo();
+        ciclo.setId("IV");
+        ciclo.setNombre("Ciclo IV");
+        return ciclo;
     }
 
     private Area buildArea() {

@@ -12,6 +12,7 @@ import com.sesiones.sesiones_backend.entity.Competencia;
 import com.sesiones.sesiones_backend.entity.Desempeno;
 import com.sesiones.sesiones_backend.entity.EstandarAprendizaje;
 import com.sesiones.sesiones_backend.entity.Grado;
+import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
 import com.sesiones.sesiones_backend.repository.EstandarAprendizajeRepository;
@@ -37,15 +38,21 @@ public class GenerarSesionService {
         var area = referenceResolver.findArea(request.getAreaId());
         Competencia competencia = referenceResolver.findCompetenciaByArea(request.getCompetenciaId(), request.getAreaId());
         List<Capacidad> capacidades = capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId());
-        List<EstandarAprendizaje> estandares = grado.getCiclo() == null
-            ? List.of()
-            : estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
-                competencia.getId(),
-                grado.getCiclo().getId()
-            );
+        String cicloId = requireCicloId(grado);
+        List<EstandarAprendizaje> estandares = estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
+            competencia.getId(),
+            cicloId
+        );
         List<Desempeno> desempenos = desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(grado.getId(), competencia.getId());
 
         return templateSessionGeneratorService.generate(request, grado, area, competencia, capacidades, estandares, desempenos);
+    }
+
+    private String requireCicloId(Grado grado) {
+        if (grado.getCiclo() == null || grado.getCiclo().getId() == null || grado.getCiclo().getId().isBlank()) {
+            throw new BusinessRuleException("El grado seleccionado no tiene ciclo educativo configurado");
+        }
+        return grado.getCiclo().getId();
     }
 }
 

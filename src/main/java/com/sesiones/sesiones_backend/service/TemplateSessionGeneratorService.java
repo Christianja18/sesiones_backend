@@ -32,10 +32,12 @@ public class TemplateSessionGeneratorService {
         String tema = request.getTema().trim();
         String contexto = request.getContexto().trim();
         String competenciaTexto = competencia.getDescripcion().trim();
+        String nivelTexto = grado.getNivel() == null ? "nivel no disponible" : grado.getNivel().getNombre();
+        String cicloTexto = grado.getCiclo() == null ? "ciclo no disponible" : formatCiclo(grado);
 
         return SesionResponse.builder()
             .titulo("Sesion de " + area.getNombre() + ": " + tema)
-            .proposito(buildPurpose(grado.getNombre(), competenciaTexto, tema, contexto))
+            .proposito(buildPurpose(nivelTexto, grado.getNombre(), cicloTexto, competenciaTexto, tema, contexto))
             .duracionMinutos(request.getDuracionMinutos())
             .generadoPorIa(false)
             .competencias(List.of(new TextoReferenciaResponse(competencia.getId(), competenciaTexto)))
@@ -49,11 +51,19 @@ public class TemplateSessionGeneratorService {
             .build();
     }
 
-    private String buildPurpose(String grado, String competencia, String tema, String contexto) {
-        return "Que los estudiantes de " + grado
+    private String buildPurpose(String nivel, String grado, String ciclo, String competencia, String tema, String contexto) {
+        return "Que los estudiantes de " + grado + " de " + nivel + " (" + ciclo + ")"
             + " desarrollen la competencia \"" + competencia + "\""
             + " mediante actividades vinculadas al tema \"" + tema + "\""
             + " y conectadas con el contexto: " + contexto + ".";
+    }
+
+    private String formatCiclo(Grado grado) {
+        String cicloId = grado.getCiclo().getId();
+        String cicloNombre = grado.getCiclo().getNombre() == null || grado.getCiclo().getNombre().isBlank()
+            ? cicloId
+            : grado.getCiclo().getNombre();
+        return cicloId + " - " + cicloNombre;
     }
 
     private ActividadesSesionDto buildActivities(String tema, String contexto, String competencia) {

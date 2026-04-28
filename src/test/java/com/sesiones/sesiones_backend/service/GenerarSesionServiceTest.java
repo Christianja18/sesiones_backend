@@ -16,6 +16,7 @@ import com.sesiones.sesiones_backend.dto.GenerateSesionRequest;
 import com.sesiones.sesiones_backend.dto.SesionResponse;
 import com.sesiones.sesiones_backend.entity.Area;
 import com.sesiones.sesiones_backend.entity.Capacidad;
+import com.sesiones.sesiones_backend.entity.Ciclo;
 import com.sesiones.sesiones_backend.entity.Competencia;
 import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
@@ -65,6 +66,10 @@ class GenerarSesionServiceTest {
         grado.setId(2);
         grado.setNivel(nivel);
         grado.setNombre("4to");
+        Ciclo ciclo = new Ciclo();
+        ciclo.setId("IV");
+        ciclo.setNombre("Ciclo IV");
+        grado.setCiclo(ciclo);
 
         Area area = new Area();
         area.setId(3);
@@ -87,6 +92,7 @@ class GenerarSesionServiceTest {
         when(referenceResolver.findArea(3)).thenReturn(area);
         when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
+        when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(4, "IV")).thenReturn(List.of());
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(List.of());
         when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), List.of(), List.of()))
             .thenReturn(expected);

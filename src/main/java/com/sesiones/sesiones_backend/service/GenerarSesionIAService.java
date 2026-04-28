@@ -2,6 +2,7 @@ package com.sesiones.sesiones_backend.service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import com.sesiones.sesiones_backend.dto.SesionResponse;
 import com.sesiones.sesiones_backend.dto.TextoReferenciaResponse;
 import com.sesiones.sesiones_backend.entity.Area;
 import com.sesiones.sesiones_backend.entity.Capacidad;
+import com.sesiones.sesiones_backend.entity.Ciclo;
 import com.sesiones.sesiones_backend.entity.Competencia;
 import com.sesiones.sesiones_backend.entity.Desempeno;
 import com.sesiones.sesiones_backend.entity.EstandarAprendizaje;
@@ -35,6 +37,13 @@ import lombok.RequiredArgsConstructor;
 public class GenerarSesionIAService {
 
     private static final int MAX_LLM_ATTEMPTS = 2;
+    private static final String[] ALTERNATIVE_FOCUSES = {
+        "resolucion de problemas contextualizados",
+        "trabajo colaborativo con producto observable",
+        "indagacion guiada con preguntas retadoras",
+        "aplicacion practica en situaciones del entorno",
+        "analisis de evidencias y argumentacion"
+    };
 
     private final LLMClient llmClient;
     private final ReferenceResolver referenceResolver;
@@ -51,13 +60,14 @@ public class GenerarSesionIAService {
         Area area = referenceResolver.findArea(request.getAreaId());
         Competencia competencia = referenceResolver.findCompetenciaByArea(request.getCompetenciaId(), request.getAreaId());
         List<Capacidad> capacidades = capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId());
-        List<EstandarAprendizaje> estandares = grado.getCiclo() == null
-            ? List.of()
-            : estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
-                competencia.getId(),
-                grado.getCiclo().getId()
-            );
+        String cicloId = requireCicloId(grado);
+        List<EstandarAprendizaje> estandares = estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
+            competencia.getId(),
+            cicloId
+        );
         List<Desempeno> desempenos = desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(grado.getId(), competencia.getId());
+        String alternativeKey = buildAlternativeKey(request);
+        String alternativeFocus = selectAlternativeFocus(alternativeKey);
 
         GeneratedSesionContent generatedContent = generateWithRetry(
             request,
@@ -67,7 +77,9 @@ public class GenerarSesionIAService {
             competencia,
             capacidades,
             estandares,
-            desempenos
+            desempenos,
+            alternativeKey,
+            alternativeFocus
         );
         if (generatedContent == null) {
             return templateSessionGeneratorService.generate(request, grado, area, competencia, capacidades, estandares, desempenos);
@@ -97,7 +109,9 @@ public class GenerarSesionIAService {
         Competencia competencia,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
-        List<Desempeno> desempenos
+        List<Desempeno> desempenos,
+        String alternativeKey,
+        String alternativeFocus
     ) {
         BusinessRuleException lastException = null;
 
@@ -113,6 +127,8 @@ public class GenerarSesionIAService {
                     capacidades,
                     estandares,
                     desempenos,
+                    alternativeKey,
+                    alternativeFocus,
                     strictRetry
                 );
                 ActividadesSesionDto activities = generateActivities(
@@ -125,6 +141,8 @@ public class GenerarSesionIAService {
                     capacidades,
                     estandares,
                     desempenos,
+                    alternativeKey,
+                    alternativeFocus,
                     strictRetry
                 );
                 EvaluationContent evaluation = generateEvaluation(
@@ -137,6 +155,8 @@ public class GenerarSesionIAService {
                     capacidades,
                     estandares,
                     desempenos,
+                    alternativeKey,
+                    alternativeFocus,
                     strictRetry
                 );
 
@@ -170,9 +190,23 @@ public class GenerarSesionIAService {
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
+        String alternativeKey,
+        String alternativeFocus,
         boolean strictRetry
     ) {
-        String prompt = buildStructurePrompt(request, nivel, grado, area, competencia, capacidades, estandares, desempenos, strictRetry);
+        String prompt = buildStructurePrompt(
+            request,
+            nivel,
+            grado,
+            area,
+            competencia,
+            capacidades,
+            estandares,
+            desempenos,
+            alternativeKey,
+            alternativeFocus,
+            strictRetry
+        );
         JsonNode root = parseResponse(llmClient.generate(prompt));
 
         String titulo = readRequiredText(root, "titulo");
@@ -195,9 +229,24 @@ public class GenerarSesionIAService {
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
+        String alternativeKey,
+        String alternativeFocus,
         boolean strictRetry
     ) {
-        String prompt = buildActivitiesPrompt(request, nivel, grado, area, competencia, structure, capacidades, estandares, desempenos, strictRetry);
+        String prompt = buildActivitiesPrompt(
+            request,
+            nivel,
+            grado,
+            area,
+            competencia,
+            structure,
+            capacidades,
+            estandares,
+            desempenos,
+            alternativeKey,
+            alternativeFocus,
+            strictRetry
+        );
         JsonNode root = parseResponse(llmClient.generate(prompt));
 
         return ActividadesSesionDto.builder()
@@ -217,9 +266,24 @@ public class GenerarSesionIAService {
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
+        String alternativeKey,
+        String alternativeFocus,
         boolean strictRetry
     ) {
-        String prompt = buildEvaluationPrompt(request, nivel, grado, area, competencia, structure, capacidades, estandares, desempenos, strictRetry);
+        String prompt = buildEvaluationPrompt(
+            request,
+            nivel,
+            grado,
+            area,
+            competencia,
+            structure,
+            capacidades,
+            estandares,
+            desempenos,
+            alternativeKey,
+            alternativeFocus,
+            strictRetry
+        );
         JsonNode root = parseResponse(llmClient.generate(prompt));
 
         List<String> criterios = readRequiredTextArray(root, "criterios");
@@ -254,6 +318,8 @@ public class GenerarSesionIAService {
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
+        String alternativeKey,
+        String alternativeFocus,
         boolean strictRetry
     ) {
         String prompt = """
@@ -262,17 +328,26 @@ public class GenerarSesionIAService {
             Datos:
             - Nivel: %s
             - Grado: %s
+            - Ciclo: %s
             - Area: %s
             - Competencia: %s
             - Tema: %s
             - Contexto: %s
             - Duracion: %s minutos
+            - Codigo de alternativa: %s
+            - Enfoque de esta alternativa: %s
             - Capacidades de referencia:
             %s
             - Estandares de referencia:
             %s
             - Desempenos de referencia:
             %s
+
+            Reglas de alineacion:
+            - Ajusta la complejidad cognitiva, el lenguaje y la autonomia al nivel, grado y ciclo indicados.
+            - Mantente estrictamente en el area y competencia indicadas.
+            - Usa como base las capacidades, estandares y desempenos de referencia; no inventes otro curriculo.
+            - Genera una alternativa distinta para el docente variando situacion, dinamica y producto.
 
             Responde SOLO en JSON valido:
             {
@@ -285,11 +360,14 @@ public class GenerarSesionIAService {
             """.formatted(
             nivel.getNombre(),
             grado.getNombre(),
+            formatCiclo(grado),
             area.getNombre(),
             competencia.getDescripcion(),
             request.getTema().trim(),
             request.getContexto().trim(),
             request.getDuracionMinutos(),
+            alternativeKey,
+            alternativeFocus,
             joinCapacidades(capacidades),
             joinEstandares(estandares),
             joinDesempenos(desempenos)
@@ -318,6 +396,8 @@ public class GenerarSesionIAService {
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
+        String alternativeKey,
+        String alternativeFocus,
         boolean strictRetry
     ) {
         String prompt = """
@@ -331,18 +411,26 @@ public class GenerarSesionIAService {
             Datos:
             - Nivel: %s
             - Grado: %s
+            - Ciclo: %s
             - Area: %s
             - Competencia: %s
             - Tema: %s
             - Contexto: %s
             - Titulo: %s
             - Proposito: %s
+            - Codigo de alternativa: %s
+            - Enfoque de esta alternativa: %s
             - Capacidades de referencia:
             %s
             - Estandares de referencia:
             %s
             - Desempenos de referencia:
             %s
+
+            Reglas de alineacion:
+            - Ajusta la complejidad de las actividades al nivel, grado y ciclo indicados.
+            - Mantente estrictamente en el area y competencia indicadas.
+            - Propone una secuencia distinta para esta alternativa.
 
             Devuelve SOLO en JSON valido:
             {
@@ -353,12 +441,15 @@ public class GenerarSesionIAService {
             """.formatted(
             nivel.getNombre(),
             grado.getNombre(),
+            formatCiclo(grado),
             area.getNombre(),
             competencia.getDescripcion(),
             request.getTema().trim(),
             request.getContexto().trim(),
             structure.getTitulo(),
             structure.getProposito(),
+            alternativeKey,
+            alternativeFocus,
             joinCapacidades(capacidades),
             joinEstandares(estandares),
             joinDesempenos(desempenos)
@@ -387,6 +478,8 @@ public class GenerarSesionIAService {
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
+        String alternativeKey,
+        String alternativeFocus,
         boolean strictRetry
     ) {
         String prompt = """
@@ -395,18 +488,26 @@ public class GenerarSesionIAService {
             Datos:
             - Nivel: %s
             - Grado: %s
+            - Ciclo: %s
             - Area: %s
             - Competencia: %s
             - Tema: %s
             - Contexto: %s
             - Titulo: %s
             - Proposito: %s
+            - Codigo de alternativa: %s
+            - Enfoque de esta alternativa: %s
             - Capacidades de referencia:
             %s
             - Estandares de referencia:
             %s
             - Desempenos de referencia:
             %s
+
+            Reglas de alineacion:
+            - Los criterios deben medir la competencia, capacidades y desempenos de este grado.
+            - La exigencia debe corresponder al nivel, grado y ciclo indicados.
+            - La evidencia e instrumento deben corresponder a la alternativa generada.
 
             Devuelve SOLO en JSON valido:
             {
@@ -420,12 +521,15 @@ public class GenerarSesionIAService {
             """.formatted(
             nivel.getNombre(),
             grado.getNombre(),
+            formatCiclo(grado),
             area.getNombre(),
             competencia.getDescripcion(),
             request.getTema().trim(),
             request.getContexto().trim(),
             structure.getTitulo(),
             structure.getProposito(),
+            alternativeKey,
+            alternativeFocus,
             joinCapacidades(capacidades),
             joinEstandares(estandares),
             joinDesempenos(desempenos)
@@ -442,6 +546,33 @@ public class GenerarSesionIAService {
             - Cada lista debe contener al menos un elemento
             - No uses markdown ni texto fuera del JSON
             """;
+    }
+
+    private String requireCicloId(Grado grado) {
+        if (grado.getCiclo() == null || grado.getCiclo().getId() == null || grado.getCiclo().getId().isBlank()) {
+            throw new BusinessRuleException("El grado seleccionado no tiene ciclo educativo configurado");
+        }
+        return grado.getCiclo().getId();
+    }
+
+    private String formatCiclo(Grado grado) {
+        Ciclo ciclo = grado.getCiclo();
+        String nombre = ciclo.getNombre() == null || ciclo.getNombre().isBlank()
+            ? ciclo.getId()
+            : ciclo.getNombre();
+        return ciclo.getId() + " - " + nombre;
+    }
+
+    private String buildAlternativeKey(GenerateSesionRequest request) {
+        if (request.getAlternativa() != null) {
+            return "alternativa-" + request.getAlternativa();
+        }
+        return "alternativa-" + UUID.randomUUID();
+    }
+
+    private String selectAlternativeFocus(String alternativeKey) {
+        int index = Math.floorMod(alternativeKey.hashCode(), ALTERNATIVE_FOCUSES.length);
+        return ALTERNATIVE_FOCUSES[index];
     }
 
     private String joinCapacidades(List<Capacidad> capacidades) {

@@ -14,4 +14,5 @@ public class LLMProperties {
     private String apiKey = "";
     private String model = "deepseek-chat";
     private int timeoutSeconds = 30;
+    private double temperature = 0.7;
 }

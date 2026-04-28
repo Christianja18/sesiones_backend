@@ -38,13 +38,15 @@ public class DeepSeekClient implements LLMClient {
 
         DeepSeekChatRequest request = new DeepSeekChatRequest(
             llmProperties.getModel(),
-            List.of(new ChatMessage("user", prompt))
+            List.of(new ChatMessage("user", prompt)),
+            llmProperties.getTemperature()
         );
 
         LOGGER.info(
-            "Enviando solicitud a DeepSeek. modelo={}, timeoutSegundos={}, promptLength={}",
+            "Enviando solicitud a DeepSeek. modelo={}, timeoutSegundos={}, temperature={}, promptLength={}",
             llmProperties.getModel(),
             llmProperties.getTimeoutSeconds(),
+            llmProperties.getTemperature(),
             prompt.length()
         );
         LOGGER.debug("Prompt enviado a DeepSeek: {}", truncate(prompt));
@@ -150,7 +152,7 @@ public class DeepSeekClient implements LLMClient {
         return value.substring(0, LOG_PREVIEW_LIMIT) + "...";
     }
 
-    private record DeepSeekChatRequest(String model, List<ChatMessage> messages) {
+    private record DeepSeekChatRequest(String model, List<ChatMessage> messages, double temperature) {
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)
