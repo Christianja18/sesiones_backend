@@ -1,5 +1,6 @@
 package com.sesiones.sesiones_backend.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -16,5 +17,7 @@ public interface SesionRepository extends JpaRepository<Sesion, Integer> {
         "unidad.area"
     })
     Optional<Sesion> findDetailedById(Integer id);
+
+    List<Sesion> findByUnidadIdOrderByFechaDescIdDesc(Integer unidadId);
 }
 

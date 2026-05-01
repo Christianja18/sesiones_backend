@@ -2,6 +2,7 @@ package com.sesiones.sesiones_backend.service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.Normalizer;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,7 +118,7 @@ public class DocumentoCurriculoChunkerService {
                 builder.append(String.format("%02x", value));
             }
             return builder.toString();
-        } catch (Exception exception) {
+        } catch (NoSuchAlgorithmException exception) {
             throw new BusinessRuleException("No fue posible generar el hash del chunk curricular");
         }
     }

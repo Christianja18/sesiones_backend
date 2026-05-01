@@ -1,5 +1,6 @@
 package com.sesiones.sesiones_backend.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -11,5 +12,7 @@ public interface UnidadRepository extends JpaRepository<Unidad, Integer> {
 
     @EntityGraph(attributePaths = {"grado", "grado.nivel", "area", "docente", "docente.institucion"})
     Optional<Unidad> findDetailedById(Integer id);
+
+    List<Unidad> findByDocenteIdOrderByFechaInicioDescIdDesc(Integer docenteId);
 }
 

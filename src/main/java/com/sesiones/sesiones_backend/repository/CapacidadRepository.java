@@ -14,6 +14,15 @@ public interface CapacidadRepository extends JpaRepository<Capacidad, Integer> {
 
     List<Capacidad> findByCompetenciaIdOrderByIdAsc(Integer competenciaId);
 
+    @Query("""
+        select c
+        from Capacidad c
+        join c.competencia competencia
+        where (:competenciaId is null or competencia.id = :competenciaId)
+        order by competencia.id asc, c.id asc
+        """)
+    List<Capacidad> findCatalog(@Param("competenciaId") Integer competenciaId);
+
     Optional<Capacidad> findByCompetenciaIdAndDescripcionHash(Integer competenciaId, String descripcionHash);
 
     @Modifying

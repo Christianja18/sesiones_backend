@@ -1,5 +1,7 @@
 package com.sesiones.sesiones_backend.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -21,7 +23,20 @@ public class Docente extends CreationAuditableEntity {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "institucion_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "institucion_id")
     private Institucion institucion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rol_id")
+    private Rol rol;
+
+    @Column(name = "password_hash", length = 255)
+    private String passwordHash;
+
+    @Column(nullable = false)
+    private boolean activo = true;
+
+    @Column(name = "ultimo_login_at")
+    private LocalDateTime ultimoLoginAt;
 }

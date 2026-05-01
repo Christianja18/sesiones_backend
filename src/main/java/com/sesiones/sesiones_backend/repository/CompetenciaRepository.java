@@ -16,6 +16,17 @@ public interface CompetenciaRepository extends JpaRepository<Competencia, Intege
 
     Optional<Competencia> findByAreaIdAndDescripcionHash(Integer areaId, String descripcionHash);
 
+    List<Competencia> findByAreaIdOrderByIdAsc(Integer areaId);
+
+    @Query("""
+        select c
+        from Competencia c
+        join c.area a
+        where (:areaId is null or a.id = :areaId)
+        order by a.nombre asc, c.id asc
+        """)
+    List<Competencia> findCatalog(@Param("areaId") Integer areaId);
+
     @Modifying
     @Query(
         value = """

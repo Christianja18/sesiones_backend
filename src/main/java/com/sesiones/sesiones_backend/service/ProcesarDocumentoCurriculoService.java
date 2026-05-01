@@ -1,6 +1,7 @@
 package com.sesiones.sesiones_backend.service;
 
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -130,7 +131,7 @@ public class ProcesarDocumentoCurriculoService {
                 builder.append(String.format("%02x", value));
             }
             return builder.toString();
-        } catch (Exception exception) {
+        } catch (NoSuchAlgorithmException exception) {
             throw new BusinessRuleException("No fue posible calcular la huella del documento curricular");
         }
     }

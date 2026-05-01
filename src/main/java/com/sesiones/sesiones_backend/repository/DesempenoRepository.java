@@ -14,6 +14,20 @@ public interface DesempenoRepository extends JpaRepository<Desempeno, Integer> {
 
     List<Desempeno> findByGradoIdAndCompetenciaIdOrderByIdAsc(Integer gradoId, Integer competenciaId);
 
+    @Query("""
+        select d
+        from Desempeno d
+        join d.grado g
+        join d.competencia c
+        where (:gradoId is null or g.id = :gradoId)
+          and (:competenciaId is null or c.id = :competenciaId)
+        order by g.id asc, c.id asc, d.id asc
+        """)
+    List<Desempeno> findCatalog(
+        @Param("gradoId") Integer gradoId,
+        @Param("competenciaId") Integer competenciaId
+    );
+
     Optional<Desempeno> findByGradoIdAndCompetenciaIdAndDescripcionHash(
         Integer gradoId,
         Integer competenciaId,
