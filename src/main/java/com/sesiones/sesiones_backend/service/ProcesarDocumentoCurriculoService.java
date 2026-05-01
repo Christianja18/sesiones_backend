@@ -81,28 +81,15 @@ public class ProcesarDocumentoCurriculoService {
                 chunk.hashContenido(),
                 abbreviate(chunk.contenido())
             );
-            try {
-                CurriculoDocumentoParseResponse response = curriculoLlmClient.extraerCurriculo(chunk.contenido(), tipoDocumento);
-                int itemsCount = response == null || response.getItems() == null ? 0 : response.getItems().size();
-                LOGGER.info(
-                    "Chunk curricular procesado correctamente. tipo={}, orden={}, itemsExtraidos={}",
-                    tipoDocumento.getDatabaseValue(),
-                    chunk.orden(),
-                    itemsCount
-                );
-                analisis.add(new DocumentoChunkAnalizado(chunk, response));
-            } catch (RuntimeException exception) {
-                LOGGER.error(
-                    "Fallo la interpretacion de un chunk curricular. tipo={}, orden={}, paginas={}..{}, hash={}",
-                    tipoDocumento.getDatabaseValue(),
-                    chunk.orden(),
-                    chunk.paginaInicio(),
-                    chunk.paginaFin(),
-                    chunk.hashContenido(),
-                    exception
-                );
-                throw exception;
-            }
+            CurriculoDocumentoParseResponse response = curriculoLlmClient.extraerCurriculo(chunk.contenido(), tipoDocumento);
+            int itemsCount = response == null || response.getItems() == null ? 0 : response.getItems().size();
+            LOGGER.info(
+                "Chunk curricular procesado correctamente. tipo={}, orden={}, itemsExtraidos={}",
+                tipoDocumento.getDatabaseValue(),
+                chunk.orden(),
+                itemsCount
+            );
+            analisis.add(new DocumentoChunkAnalizado(chunk, response));
         }
 
         return analisis;

@@ -4,9 +4,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.sesiones.sesiones_backend.dto.SesionResponse;
-import com.sesiones.sesiones_backend.repository.SesionRepository;
-import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.exception.ResourceNotFoundException;
+import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
+import com.sesiones.sesiones_backend.repository.SesionRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,8 +21,6 @@ public class ObtenerSesionService {
     public SesionResponse execute(Integer sesionId) {
         return sesionRepository.findDetailedById(sesionId)
             .map(sessionResponseMapper::toSesionResponse)
-            .orElseThrow(() -> new ResourceNotFoundException("No existe la sesiÃƒÂ³n con id " + sesionId));
+            .orElseThrow(() -> new ResourceNotFoundException("No existe la sesion con id " + sesionId));
     }
 }
-
-

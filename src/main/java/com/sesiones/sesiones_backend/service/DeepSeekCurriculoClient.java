@@ -19,6 +19,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sesiones.sesiones_backend.dto.CurriculoDocumentoParseResponse;
@@ -173,20 +174,9 @@ public class DeepSeekCurriculoClient implements CurriculoLlmClient {
                     "No fue posible comunicarse correctamente con DeepSeek para procesar el curriculo",
                     exception
                 );
-            } catch (BusinessRuleException exception) {
+            } catch (JsonProcessingException exception) {
                 LOGGER.error(
-                    "No fue posible interpretar la respuesta curricular de DeepSeek. contentPreview={}, jsonPreview={}, responsePreview={}, attempt={}/{}",
-                    abbreviate(content),
-                    abbreviate(jsonPayload),
-                    abbreviate(response == null ? null : response.toString()),
-                    attempt,
-                    totalAttempts,
-                    exception
-                );
-                throw exception;
-            } catch (Exception exception) {
-                LOGGER.error(
-                    "Fallo inesperado al interpretar la respuesta curricular de DeepSeek. contentPreview={}, jsonPreview={}, responsePreview={}, attempt={}/{}",
+                    "No fue posible mapear el JSON curricular de DeepSeek. contentPreview={}, jsonPreview={}, responsePreview={}, attempt={}/{}",
                     abbreviate(content),
                     abbreviate(jsonPayload),
                     abbreviate(response == null ? null : response.toString()),

@@ -7,9 +7,9 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sesiones.sesiones_backend.dto.ActividadesSesionDto;
 import com.sesiones.sesiones_backend.dto.SaveSesionRequest;
 import com.sesiones.sesiones_backend.dto.SesionResponse;
-import com.sesiones.sesiones_backend.util.enums.InstrumentoTipo;
 import com.sesiones.sesiones_backend.entity.Capacidad;
 import com.sesiones.sesiones_backend.entity.Competencia;
 import com.sesiones.sesiones_backend.entity.CriterioEvaluacion;
@@ -18,12 +18,11 @@ import com.sesiones.sesiones_backend.entity.Evidencia;
 import com.sesiones.sesiones_backend.entity.InstrumentoEvaluacion;
 import com.sesiones.sesiones_backend.entity.Sesion;
 import com.sesiones.sesiones_backend.entity.Unidad;
+import com.sesiones.sesiones_backend.exception.BusinessRuleException;
+import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
 import com.sesiones.sesiones_backend.repository.SesionRepository;
-import com.sesiones.sesiones_backend.service.RecursiveActivityAssembler;
-import com.sesiones.sesiones_backend.service.ReferenceResolver;
-import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
-import com.sesiones.sesiones_backend.exception.BusinessRuleException;
+import com.sesiones.sesiones_backend.util.enums.InstrumentoTipo;
 
 import lombok.RequiredArgsConstructor;
 
@@ -33,15 +32,21 @@ public class GuardarSesionService {
 
     private final ReferenceResolver referenceResolver;
     private final DesempenoRepository desempenoRepository;
-    private final RecursiveActivityAssembler recursiveActivityAssembler;
+    private final ActivityAssembler activityAssembler;
     private final SessionResponseMapper sessionResponseMapper;
     private final SesionRepository sesionRepository;
 
     @Transactional
     public SesionResponse execute(SaveSesionRequest request) {
+        validateRequest(request);
         if (request.getCompetenciaIds() == null || request.getCompetenciaIds().isEmpty()) {
-            throw new BusinessRuleException("La sesiÃƒÂ³n debe incluir al menos una competencia");
+            throw new BusinessRuleException("La sesion debe incluir al menos una competencia");
         }
+
+        List<String> criterios = cleanText(request.getCriteriosEvaluacion());
+        List<String> evidencias = cleanText(request.getEvidencias());
+        List<String> detalleInstrumento = cleanText(request.getInstrumentoEvaluacion().getDetalle());
+        validateRequiredSessionContent(request.getActividades(), criterios, evidencias, detalleInstrumento);
 
         Unidad unidad = referenceResolver.findUnidad(request.getUnidadId());
         Sesion sesion = new Sesion();
@@ -58,12 +63,9 @@ public class GuardarSesionService {
         ));
         sesion.setCapacidades(validateCapacidades(referenceResolver.findCapacidades(uniqueIds(request.getCapacidadIds())), sesion.getCompetencias()));
         sesion.setDesempenos(validateDesempenos(uniqueIds(request.getDesempenoIds()), sesion.getCompetencias(), unidad));
-        sesion.setActividades(recursiveActivityAssembler.assemble(sesion, request.getActividades()));
-        if (sesion.getActividades().isEmpty()) {
-            throw new BusinessRuleException("La sesiÃƒÂ³n debe incluir al menos una actividad");
-        }
-        sesion.setCriteriosEvaluacion(buildCriteria(request, sesion));
-        sesion.setEvidencias(buildEvidence(request, sesion));
+        sesion.setActividades(activityAssembler.assemble(sesion, request.getActividades()));
+        sesion.setCriteriosEvaluacion(buildCriteria(criterios, sesion));
+        sesion.setEvidencias(buildEvidence(evidencias, sesion));
         sesion.setInstrumentosEvaluacion(List.of(buildInstrument(request, sesion)));
 
         Sesion saved = sesionRepository.save(sesion);
@@ -82,7 +84,7 @@ public class GuardarSesionService {
     private List<Competencia> validateCompetencias(List<Competencia> competencias, Unidad unidad) {
         boolean invalid = competencias.stream().anyMatch(item -> !item.getArea().getId().equals(unidad.getArea().getId()));
         if (invalid) {
-            throw new BusinessRuleException("Todas las competencias deben corresponder al ÃƒÂ¡rea de la unidad");
+            throw new BusinessRuleException("Todas las competencias deben corresponder al area de la unidad");
         }
         return competencias;
     }
@@ -94,7 +96,7 @@ public class GuardarSesionService {
 
         List<Desempeno> desempenos = desempenoRepository.findByIdIn(desempenoIds);
         if (desempenos.size() != desempenoIds.size()) {
-            throw new BusinessRuleException("Uno o mÃƒÂ¡s desempeÃƒÂ±os no existen");
+            throw new BusinessRuleException("Uno o mas desempenos no existen");
         }
 
         List<Integer> competenciaIds = competencias.stream().map(Competencia::getId).toList();
@@ -103,13 +105,13 @@ public class GuardarSesionService {
                 || !item.getGrado().getId().equals(unidad.getGrado().getId())
         );
         if (invalid) {
-            throw new BusinessRuleException("Todos los desempeÃƒÂ±os deben corresponder al grado y competencias de la sesiÃƒÂ³n");
+            throw new BusinessRuleException("Todos los desempenos deben corresponder al grado y competencias de la sesion");
         }
         return desempenos;
     }
 
-    private List<CriterioEvaluacion> buildCriteria(SaveSesionRequest request, Sesion sesion) {
-        return cleanText(request.getCriteriosEvaluacion()).stream()
+    private List<CriterioEvaluacion> buildCriteria(List<String> criterios, Sesion sesion) {
+        return criterios.stream()
             .map(text -> {
                 CriterioEvaluacion criterio = new CriterioEvaluacion();
                 criterio.setSesion(sesion);
@@ -119,8 +121,8 @@ public class GuardarSesionService {
             .toList();
     }
 
-    private List<Evidencia> buildEvidence(SaveSesionRequest request, Sesion sesion) {
-        return cleanText(request.getEvidencias()).stream()
+    private List<Evidencia> buildEvidence(List<String> evidencias, Sesion sesion) {
+        return evidencias.stream()
             .map(text -> {
                 Evidencia evidencia = new Evidencia();
                 evidencia.setSesion(sesion);
@@ -134,12 +136,44 @@ public class GuardarSesionService {
         InstrumentoEvaluacion instrumento = new InstrumentoEvaluacion();
         instrumento.setSesion(sesion);
         try {
-            instrumento.setTipo(InstrumentoTipo.valueOf(request.getInstrumentoEvaluacion().getTipo().trim().toUpperCase()));
+            instrumento.setTipo(InstrumentoTipo.fromDatabaseValue(request.getInstrumentoEvaluacion().getTipo()));
         } catch (IllegalArgumentException exception) {
-            throw new BusinessRuleException("El tipo de instrumento debe ser RUBRICA o LISTA_COTEJO");
+            throw new BusinessRuleException("El tipo de instrumento debe ser rubrica o lista_cotejo");
         }
         instrumento.setContenidoJson(sessionResponseMapper.toInstrumentJson(request.getInstrumentoEvaluacion()));
         return instrumento;
+    }
+
+    private void validateRequest(SaveSesionRequest request) {
+        if (request == null) {
+            throw new BusinessRuleException("La solicitud de sesion es obligatoria");
+        }
+        if (request.getActividades() == null) {
+            throw new BusinessRuleException("La sesion debe incluir actividades de inicio, desarrollo y cierre");
+        }
+        if (request.getInstrumentoEvaluacion() == null) {
+            throw new BusinessRuleException("La sesion debe incluir un instrumento de evaluacion");
+        }
+    }
+
+    private void validateRequiredSessionContent(
+        ActividadesSesionDto actividades,
+        List<String> criterios,
+        List<String> evidencias,
+        List<String> detalleInstrumento
+    ) {
+        if (!hasText(actividades.getInicio()) || !hasText(actividades.getDesarrollo()) || !hasText(actividades.getCierre())) {
+            throw new BusinessRuleException("La sesion debe incluir actividades de inicio, desarrollo y cierre");
+        }
+        if (criterios.isEmpty()) {
+            throw new BusinessRuleException("La sesion debe incluir al menos un criterio de evaluacion");
+        }
+        if (evidencias.isEmpty()) {
+            throw new BusinessRuleException("La sesion debe incluir al menos una evidencia");
+        }
+        if (detalleInstrumento.isEmpty()) {
+            throw new BusinessRuleException("El instrumento de evaluacion debe incluir al menos un detalle");
+        }
     }
 
     private List<Integer> uniqueIds(List<Integer> ids) {
@@ -158,6 +192,8 @@ public class GuardarSesionService {
             .map(String::trim)
             .toList();
     }
+
+    private boolean hasText(List<String> values) {
+        return values != null && values.stream().anyMatch(item -> item != null && !item.isBlank());
+    }
 }
-
-

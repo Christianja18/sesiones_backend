@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import com.sesiones.sesiones_backend.exception.ExternalServiceException;
@@ -32,22 +33,12 @@ public class DocumentoCurriculoDownloaderService {
     }
 
     public byte[] download(String archivoUrl) {
+        byte[] contenido;
         try {
-            byte[] contenido = restClient.get()
+            contenido = restClient.get()
                 .uri(archivoUrl)
                 .retrieve()
                 .body(byte[].class);
-
-            if (contenido == null || contenido.length == 0) {
-                throw new ExternalServiceException(
-                    HttpStatus.BAD_GATEWAY,
-                    "No fue posible descargar el documento curricular",
-                    List.of("La URL no devolvio contenido util"),
-                    null
-                );
-            }
-
-            return contenido;
         } catch (RestClientResponseException exception) {
             throw new ExternalServiceException(
                 HttpStatus.BAD_GATEWAY,
@@ -55,10 +46,19 @@ public class DocumentoCurriculoDownloaderService {
                 List.of("Respuesta HTTP " + exception.getStatusCode().value()),
                 exception
             );
-        } catch (ExternalServiceException exception) {
-            throw exception;
-        } catch (Exception exception) {
+        } catch (RestClientException exception) {
             throw new ExternalServiceException("No fue posible descargar el documento curricular", exception);
         }
+
+        if (contenido == null || contenido.length == 0) {
+            throw new ExternalServiceException(
+                HttpStatus.BAD_GATEWAY,
+                "No fue posible descargar el documento curricular",
+                List.of("La URL no devolvio contenido util"),
+                null
+            );
+        }
+
+        return contenido;
     }
 }

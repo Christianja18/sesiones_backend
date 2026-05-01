@@ -1,6 +1,7 @@
 package com.sesiones.sesiones_backend.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,9 +29,9 @@ import com.sesiones.sesiones_backend.entity.Grado;
 import com.sesiones.sesiones_backend.entity.NivelEducativo;
 import com.sesiones.sesiones_backend.entity.Sesion;
 import com.sesiones.sesiones_backend.entity.Unidad;
+import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
 import com.sesiones.sesiones_backend.repository.SesionRepository;
-import com.sesiones.sesiones_backend.service.RecursiveActivityAssembler;
 import com.sesiones.sesiones_backend.service.ReferenceResolver;
 import com.sesiones.sesiones_backend.mapper.SessionResponseMapper;
 
@@ -43,7 +44,7 @@ class GuardarSesionServiceTest {
     @Mock
     private DesempenoRepository desempenoRepository;
 
-    private final RecursiveActivityAssembler recursiveActivityAssembler = new RecursiveActivityAssembler();
+    private final ActivityAssembler activityAssembler = new ActivityAssembler();
     private final SessionResponseMapper sessionResponseMapper = new SessionResponseMapper(new ObjectMapper());
 
     @Mock
@@ -56,7 +57,7 @@ class GuardarSesionServiceTest {
         guardarSesionService = new GuardarSesionService(
             referenceResolver,
             desempenoRepository,
-            recursiveActivityAssembler,
+            activityAssembler,
             sessionResponseMapper,
             sesionRepository
         );
@@ -134,6 +135,59 @@ class GuardarSesionServiceTest {
         assertEquals(List.of("ReflexiÃƒÆ’Ã‚Â³n final"), response.getActividades().getCierre());
         assertEquals(List.of(1, 2, 3, 4), savedReference.get().getActividades().stream().map(item -> item.getOrden()).toList());
         verify(sesionRepository).save(any(Sesion.class));
+    }
+
+    @Test
+    void shouldRejectSessionWithoutAllActivityStages() {
+        SaveSesionRequest request = SaveSesionRequest.builder()
+            .unidadId(7)
+            .fecha(LocalDate.of(2026, 4, 14))
+            .titulo("Sesion sobre fracciones")
+            .proposito("Comprender equivalencias")
+            .duracionMinutos(90)
+            .competenciaIds(List.of(10))
+            .actividades(ActividadesSesionDto.builder()
+                .inicio(List.of("Recordar fracciones"))
+                .desarrollo(List.of("Resolver ejercicios"))
+                .build())
+            .criteriosEvaluacion(List.of("Explica procedimientos"))
+            .evidencias(List.of("Ficha resuelta"))
+            .instrumentoEvaluacion(InstrumentoEvaluacionDto.builder()
+                .tipo("rubrica")
+                .detalle(List.of("Claridad"))
+                .build())
+            .build();
+
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> guardarSesionService.execute(request));
+
+        assertEquals("La sesion debe incluir actividades de inicio, desarrollo y cierre", exception.getMessage());
+    }
+
+    @Test
+    void shouldRejectSessionWithoutEvaluationEvidence() {
+        SaveSesionRequest request = SaveSesionRequest.builder()
+            .unidadId(7)
+            .fecha(LocalDate.of(2026, 4, 14))
+            .titulo("Sesion sobre fracciones")
+            .proposito("Comprender equivalencias")
+            .duracionMinutos(90)
+            .competenciaIds(List.of(10))
+            .actividades(ActividadesSesionDto.builder()
+                .inicio(List.of("Recordar fracciones"))
+                .desarrollo(List.of("Resolver ejercicios"))
+                .cierre(List.of("Reflexion final"))
+                .build())
+            .criteriosEvaluacion(List.of("Explica procedimientos"))
+            .evidencias(List.of(" "))
+            .instrumentoEvaluacion(InstrumentoEvaluacionDto.builder()
+                .tipo("rubrica")
+                .detalle(List.of("Claridad"))
+                .build())
+            .build();
+
+        BusinessRuleException exception = assertThrows(BusinessRuleException.class, () -> guardarSesionService.execute(request));
+
+        assertEquals("La sesion debe incluir al menos una evidencia", exception.getMessage());
     }
 }
 

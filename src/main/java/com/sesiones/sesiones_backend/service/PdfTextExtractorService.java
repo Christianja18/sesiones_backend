@@ -17,13 +17,6 @@ public class PdfTextExtractorService {
 
     private static final int PDF_HEADER_SCAN_LIMIT = 1024;
 
-    public String extractText(byte[] archivoPdf) {
-        return extractPages(archivoPdf).stream()
-            .map(PaginaPdfTexto::contenido)
-            .reduce((left, right) -> left + "\n\n" + right)
-            .orElseThrow(() -> new BusinessRuleException("No fue posible extraer texto util del PDF curricular"));
-    }
-
     public List<PaginaPdfTexto> extractPages(byte[] archivoPdf) {
         if (archivoPdf == null || archivoPdf.length == 0) {
             throw new BusinessRuleException("El contenido del archivo PDF es obligatorio");
