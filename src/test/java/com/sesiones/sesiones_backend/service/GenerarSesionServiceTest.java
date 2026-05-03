@@ -90,18 +90,18 @@ class GenerarSesionServiceTest {
         when(referenceResolver.findNivel(1)).thenReturn(nivel);
         when(referenceResolver.findGradoByNivel(2, 1)).thenReturn(grado);
         when(referenceResolver.findArea(3)).thenReturn(area);
-        when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
+        when(referenceResolver.findCompetenciasByArea(List.of(4), 3)).thenReturn(List.of(competencia));
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
         when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(4, "IV")).thenReturn(List.of());
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(List.of());
-        when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), List.of(), List.of()))
+        when(templateSessionGeneratorService.generate(request, grado, area, List.of(competencia), List.of(capacidad), List.of(), List.of()))
             .thenReturn(expected);
 
         SesionResponse response = generarSesionService.execute(request);
 
         assertSame(expected, response);
         verify(referenceResolver).findGradoByNivel(2, 1);
-        verify(templateSessionGeneratorService).generate(request, grado, area, competencia, List.of(capacidad), List.of(), List.of());
+        verify(templateSessionGeneratorService).generate(request, grado, area, List.of(competencia), List.of(capacidad), List.of(), List.of());
     }
 }
 

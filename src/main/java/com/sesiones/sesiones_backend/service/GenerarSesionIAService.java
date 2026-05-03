@@ -58,14 +58,23 @@ public class GenerarSesionIAService {
         NivelEducativo nivel = referenceResolver.findNivel(request.getNivelId());
         Grado grado = referenceResolver.findGradoByNivel(request.getGradoId(), request.getNivelId());
         Area area = referenceResolver.findArea(request.getAreaId());
-        Competencia competencia = referenceResolver.findCompetenciaByArea(request.getCompetenciaId(), request.getAreaId());
-        List<Capacidad> capacidades = capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId());
+        List<Competencia> competencias = referenceResolver.findCompetenciasByArea(request.selectedCompetenciaIds(), request.getAreaId());
+        List<Capacidad> capacidades = competencias.stream()
+            .flatMap(competencia -> capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId()).stream())
+            .toList();
         String cicloId = requireCicloId(grado);
-        List<EstandarAprendizaje> estandares = estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
-            competencia.getId(),
-            cicloId
-        );
-        List<Desempeno> desempenos = desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(grado.getId(), competencia.getId());
+        List<EstandarAprendizaje> estandares = competencias.stream()
+            .flatMap(competencia -> estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
+                competencia.getId(),
+                cicloId
+            ).stream())
+            .toList();
+        List<Desempeno> desempenos = competencias.stream()
+            .flatMap(competencia -> desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(
+                grado.getId(),
+                competencia.getId()
+            ).stream())
+            .toList();
         String alternativeKey = buildAlternativeKey(request);
         String alternativeFocus = selectAlternativeFocus(alternativeKey);
 
@@ -74,7 +83,7 @@ public class GenerarSesionIAService {
             nivel,
             grado,
             area,
-            competencia,
+            competencias,
             capacidades,
             estandares,
             desempenos,
@@ -82,7 +91,7 @@ public class GenerarSesionIAService {
             alternativeFocus
         );
         if (generatedContent == null) {
-            return templateSessionGeneratorService.generate(request, grado, area, competencia, capacidades, estandares, desempenos);
+            return templateSessionGeneratorService.generate(request, grado, area, competencias, capacidades, estandares, desempenos);
         }
 
         return SesionResponse.builder()
@@ -90,7 +99,7 @@ public class GenerarSesionIAService {
             .proposito(generatedContent.getProposito())
             .duracionMinutos(request.getDuracionMinutos())
             .generadoPorIa(true)
-            .competencias(toReferenceResponses(competencia))
+            .competencias(toReferenceResponses(competencias))
             .capacidades(toCapacidadResponses(capacidades))
             .estandares(toEstandarResponses(estandares))
             .desempenos(toDesempenoResponses(desempenos))
@@ -106,7 +115,7 @@ public class GenerarSesionIAService {
         NivelEducativo nivel,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
@@ -123,7 +132,7 @@ public class GenerarSesionIAService {
                     nivel,
                     grado,
                     area,
-                    competencia,
+                    competencias,
                     capacidades,
                     estandares,
                     desempenos,
@@ -136,7 +145,7 @@ public class GenerarSesionIAService {
                     nivel,
                     grado,
                     area,
-                    competencia,
+                    competencias,
                     structure,
                     capacidades,
                     estandares,
@@ -150,7 +159,7 @@ public class GenerarSesionIAService {
                     nivel,
                     grado,
                     area,
-                    competencia,
+                    competencias,
                     structure,
                     capacidades,
                     estandares,
@@ -186,7 +195,7 @@ public class GenerarSesionIAService {
         NivelEducativo nivel,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
@@ -199,7 +208,7 @@ public class GenerarSesionIAService {
             nivel,
             grado,
             area,
-            competencia,
+            competencias,
             capacidades,
             estandares,
             desempenos,
@@ -224,7 +233,7 @@ public class GenerarSesionIAService {
         NivelEducativo nivel,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         StructureContent structure,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
@@ -238,7 +247,7 @@ public class GenerarSesionIAService {
             nivel,
             grado,
             area,
-            competencia,
+            competencias,
             structure,
             capacidades,
             estandares,
@@ -261,7 +270,7 @@ public class GenerarSesionIAService {
         NivelEducativo nivel,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         StructureContent structure,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
@@ -275,7 +284,7 @@ public class GenerarSesionIAService {
             nivel,
             grado,
             area,
-            competencia,
+            competencias,
             structure,
             capacidades,
             estandares,
@@ -314,7 +323,7 @@ public class GenerarSesionIAService {
         NivelEducativo nivel,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos,
@@ -330,7 +339,8 @@ public class GenerarSesionIAService {
             - Grado: %s
             - Ciclo: %s
             - Area: %s
-            - Competencia: %s
+            - Competencias:
+            %s
             - Tema: %s
             - Contexto: %s
             - Duracion: %s minutos
@@ -345,7 +355,7 @@ public class GenerarSesionIAService {
 
             Reglas de alineacion:
             - Ajusta la complejidad cognitiva, el lenguaje y la autonomia al nivel, grado y ciclo indicados.
-            - Mantente estrictamente en el area y competencia indicadas.
+            - Mantente estrictamente en el area y competencias indicadas.
             - Usa como base las capacidades, estandares y desempenos de referencia; no inventes otro curriculo.
             - Genera una alternativa distinta para el docente variando situacion, dinamica y producto.
 
@@ -362,7 +372,7 @@ public class GenerarSesionIAService {
             grado.getNombre(),
             formatCiclo(grado),
             area.getNombre(),
-            competencia.getDescripcion(),
+            joinCompetencias(competencias),
             request.getTema().trim(),
             request.getContexto().trim(),
             request.getDuracionMinutos(),
@@ -391,7 +401,7 @@ public class GenerarSesionIAService {
         NivelEducativo nivel,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         StructureContent structure,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
@@ -413,7 +423,8 @@ public class GenerarSesionIAService {
             - Grado: %s
             - Ciclo: %s
             - Area: %s
-            - Competencia: %s
+            - Competencias:
+            %s
             - Tema: %s
             - Contexto: %s
             - Titulo: %s
@@ -429,7 +440,7 @@ public class GenerarSesionIAService {
 
             Reglas de alineacion:
             - Ajusta la complejidad de las actividades al nivel, grado y ciclo indicados.
-            - Mantente estrictamente en el area y competencia indicadas.
+            - Mantente estrictamente en el area y competencias indicadas.
             - Propone una secuencia distinta para esta alternativa.
 
             Devuelve SOLO en JSON valido:
@@ -443,7 +454,7 @@ public class GenerarSesionIAService {
             grado.getNombre(),
             formatCiclo(grado),
             area.getNombre(),
-            competencia.getDescripcion(),
+            joinCompetencias(competencias),
             request.getTema().trim(),
             request.getContexto().trim(),
             structure.getTitulo(),
@@ -473,7 +484,7 @@ public class GenerarSesionIAService {
         NivelEducativo nivel,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         StructureContent structure,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
@@ -490,7 +501,8 @@ public class GenerarSesionIAService {
             - Grado: %s
             - Ciclo: %s
             - Area: %s
-            - Competencia: %s
+            - Competencias:
+            %s
             - Tema: %s
             - Contexto: %s
             - Titulo: %s
@@ -505,7 +517,7 @@ public class GenerarSesionIAService {
             %s
 
             Reglas de alineacion:
-            - Los criterios deben medir la competencia, capacidades y desempenos de este grado.
+            - Los criterios deben medir las competencias, capacidades y desempenos de este grado.
             - La exigencia debe corresponder al nivel, grado y ciclo indicados.
             - La evidencia e instrumento deben corresponder a la alternativa generada.
 
@@ -523,7 +535,7 @@ public class GenerarSesionIAService {
             grado.getNombre(),
             formatCiclo(grado),
             area.getNombre(),
-            competencia.getDescripcion(),
+            joinCompetencias(competencias),
             request.getTema().trim(),
             request.getContexto().trim(),
             structure.getTitulo(),
@@ -581,6 +593,15 @@ public class GenerarSesionIAService {
         }
         return capacidades.stream()
             .map(Capacidad::getDescripcion)
+            .collect(Collectors.joining(System.lineSeparator() + "- ", "- ", ""));
+    }
+
+    private String joinCompetencias(List<Competencia> competencias) {
+        if (competencias == null || competencias.isEmpty()) {
+            return "- no_disponible";
+        }
+        return competencias.stream()
+            .map(Competencia::getDescripcion)
             .collect(Collectors.joining(System.lineSeparator() + "- ", "- ", ""));
     }
 
@@ -650,8 +671,10 @@ public class GenerarSesionIAService {
         }
     }
 
-    private List<TextoReferenciaResponse> toReferenceResponses(Competencia competencia) {
-        return List.of(new TextoReferenciaResponse(competencia.getId(), competencia.getDescripcion()));
+    private List<TextoReferenciaResponse> toReferenceResponses(List<Competencia> competencias) {
+        return competencias.stream()
+            .map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion()))
+            .collect(Collectors.toList());
     }
 
     private List<TextoReferenciaResponse> toCapacidadResponses(List<Capacidad> capacidades) {

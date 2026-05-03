@@ -82,7 +82,7 @@ class GenerarSesionIAServiceTest {
         when(referenceResolver.findNivel(1)).thenReturn(nivel);
         when(referenceResolver.findGradoByNivel(2, 1)).thenReturn(grado);
         when(referenceResolver.findArea(3)).thenReturn(area);
-        when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
+        when(referenceResolver.findCompetenciasByArea(List.of(4), 3)).thenReturn(List.of(competencia));
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
         when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(4, "IV")).thenReturn(List.of());
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(List.of(desempeno));
@@ -123,7 +123,88 @@ class GenerarSesionIAServiceTest {
         assertTrue(promptCaptor.getAllValues().get(0).contains("- Nivel: Primaria"));
         assertTrue(promptCaptor.getAllValues().get(0).contains("- Ciclo: IV - Ciclo IV"));
         assertTrue(promptCaptor.getAllValues().get(0).contains("- Area: Matematica"));
+        assertTrue(promptCaptor.getAllValues().get(0).contains("- Competencias:"));
         assertTrue(promptCaptor.getAllValues().get(0).contains("- Enfoque de esta alternativa:"));
+    }
+
+    @Test
+    void shouldGenerateSessionWithMultipleCompetencias() {
+        GenerateSesionRequest request = GenerateSesionRequest.builder()
+            .nivelId(1)
+            .gradoId(2)
+            .areaId(3)
+            .competenciaIds(List.of(4, 7))
+            .tema("Situaciones de cambio")
+            .contexto("Aula multigrado")
+            .duracionMinutos(90)
+            .build();
+        NivelEducativo nivel = buildNivel();
+        Grado grado = buildGrado(nivel);
+        Area area = buildArea();
+        Competencia competenciaCantidad = buildCompetencia(area);
+        Competencia competenciaRegularidad = new Competencia();
+        competenciaRegularidad.setId(7);
+        competenciaRegularidad.setArea(area);
+        competenciaRegularidad.setDescripcion("Resuelve problemas de regularidad, equivalencia y cambio");
+
+        Capacidad capacidadCantidad = buildCapacidad(competenciaCantidad);
+        Capacidad capacidadRegularidad = new Capacidad();
+        capacidadRegularidad.setId(8);
+        capacidadRegularidad.setCompetencia(competenciaRegularidad);
+        capacidadRegularidad.setDescripcion("Usa estrategias para encontrar equivalencias");
+
+        Desempeno desempenoCantidad = buildDesempeno(grado, competenciaCantidad);
+        Desempeno desempenoRegularidad = new Desempeno();
+        desempenoRegularidad.setId(9);
+        desempenoRegularidad.setGrado(grado);
+        desempenoRegularidad.setCompetencia(competenciaRegularidad);
+        desempenoRegularidad.setDescripcion("Describe patrones y equivalencias en situaciones cotidianas");
+
+        when(referenceResolver.findNivel(1)).thenReturn(nivel);
+        when(referenceResolver.findGradoByNivel(2, 1)).thenReturn(grado);
+        when(referenceResolver.findArea(3)).thenReturn(area);
+        when(referenceResolver.findCompetenciasByArea(List.of(4, 7), 3))
+            .thenReturn(List.of(competenciaCantidad, competenciaRegularidad));
+        when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidadCantidad));
+        when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(7)).thenReturn(List.of(capacidadRegularidad));
+        when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(4, "IV")).thenReturn(List.of());
+        when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(7, "IV")).thenReturn(List.of());
+        when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(List.of(desempenoCantidad));
+        when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 7)).thenReturn(List.of(desempenoRegularidad));
+        when(llmClient.generate(anyString())).thenReturn("""
+            {
+              "titulo": "Sesion sobre situaciones de cambio",
+              "proposito": "Resolver situaciones articulando cantidad y regularidad.",
+              "competencias": ["Resuelve problemas de cantidad", "Resuelve problemas de regularidad, equivalencia y cambio"],
+              "capacidades": ["Traduce cantidades a expresiones numericas", "Usa estrategias para encontrar equivalencias"],
+              "desempenos": ["Explica equivalencias entre fracciones", "Describe patrones y equivalencias en situaciones cotidianas"]
+            }
+            """, """
+            {
+              "inicio": ["Explorar una situacion cotidiana de cambio."],
+              "desarrollo": ["Resolver el reto con estrategias diversas.", "Comparar patrones y cantidades."],
+              "cierre": ["Socializar aprendizajes y dificultades."]
+            }
+            """, """
+            {
+              "criterios": ["Relaciona cantidades y patrones en la solucion."],
+              "evidencias": ["Producto grupal con explicacion de estrategias."],
+              "instrumento": {
+                "tipo": "rubrica",
+                "detalle": ["Uso de estrategias", "Explicacion de equivalencias"]
+              }
+            }
+            """);
+
+        SesionResponse response = generarSesionIAService.execute(request);
+
+        assertEquals(List.of(4, 7), response.getCompetencias().stream().map(item -> item.getId()).toList());
+        assertEquals(List.of(5, 8), response.getCapacidades().stream().map(item -> item.getId()).toList());
+        assertEquals(List.of(6, 9), response.getDesempenos().stream().map(item -> item.getId()).toList());
+        ArgumentCaptor<String> promptCaptor = ArgumentCaptor.forClass(String.class);
+        verify(llmClient, times(3)).generate(promptCaptor.capture());
+        assertTrue(promptCaptor.getAllValues().get(0).contains("Resuelve problemas de cantidad"));
+        assertTrue(promptCaptor.getAllValues().get(0).contains("Resuelve problemas de regularidad, equivalencia y cambio"));
     }
 
     @Test
@@ -143,12 +224,12 @@ class GenerarSesionIAServiceTest {
         when(referenceResolver.findNivel(1)).thenReturn(nivel);
         when(referenceResolver.findGradoByNivel(2, 1)).thenReturn(grado);
         when(referenceResolver.findArea(3)).thenReturn(area);
-        when(referenceResolver.findCompetenciaByArea(4, 3)).thenReturn(competencia);
+        when(referenceResolver.findCompetenciasByArea(List.of(4), 3)).thenReturn(List.of(competencia));
         when(capacidadRepository.findByCompetenciaIdOrderByIdAsc(4)).thenReturn(List.of(capacidad));
         when(estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(4, "IV")).thenReturn(Collections.emptyList());
         when(desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(2, 4)).thenReturn(Collections.emptyList());
         when(llmClient.generate(anyString())).thenReturn("no-json", "no-json");
-        when(templateSessionGeneratorService.generate(request, grado, area, competencia, List.of(capacidad), Collections.emptyList(), Collections.emptyList()))
+        when(templateSessionGeneratorService.generate(request, grado, area, List.of(competencia), List.of(capacidad), Collections.emptyList(), Collections.emptyList()))
             .thenReturn(fallbackResponse);
 
         SesionResponse response = generarSesionIAService.execute(request);

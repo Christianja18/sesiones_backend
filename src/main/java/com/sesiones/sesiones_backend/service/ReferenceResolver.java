@@ -70,6 +70,15 @@ public class ReferenceResolver {
             ));
     }
 
+    public List<Competencia> findCompetenciasByArea(List<Integer> competenciaIds, Integer areaId) {
+        if (competenciaIds == null || competenciaIds.isEmpty()) {
+            return List.of();
+        }
+        return competenciaIds.stream()
+            .map(competenciaId -> findCompetenciaByArea(competenciaId, areaId))
+            .toList();
+    }
+
     public Docente findDocente(Integer docenteId) {
         return docenteRepository.findById(docenteId)
             .orElseThrow(() -> new ResourceNotFoundException("No existe el docente con id " + docenteId));

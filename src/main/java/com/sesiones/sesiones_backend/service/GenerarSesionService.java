@@ -16,8 +16,6 @@ import com.sesiones.sesiones_backend.exception.BusinessRuleException;
 import com.sesiones.sesiones_backend.repository.CapacidadRepository;
 import com.sesiones.sesiones_backend.repository.DesempenoRepository;
 import com.sesiones.sesiones_backend.repository.EstandarAprendizajeRepository;
-import com.sesiones.sesiones_backend.service.ReferenceResolver;
-import com.sesiones.sesiones_backend.service.TemplateSessionGeneratorService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -36,16 +34,25 @@ public class GenerarSesionService {
         referenceResolver.findNivel(request.getNivelId());
         Grado grado = referenceResolver.findGradoByNivel(request.getGradoId(), request.getNivelId());
         var area = referenceResolver.findArea(request.getAreaId());
-        Competencia competencia = referenceResolver.findCompetenciaByArea(request.getCompetenciaId(), request.getAreaId());
-        List<Capacidad> capacidades = capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId());
+        List<Competencia> competencias = referenceResolver.findCompetenciasByArea(request.selectedCompetenciaIds(), request.getAreaId());
+        List<Capacidad> capacidades = competencias.stream()
+            .flatMap(competencia -> capacidadRepository.findByCompetenciaIdOrderByIdAsc(competencia.getId()).stream())
+            .toList();
         String cicloId = requireCicloId(grado);
-        List<EstandarAprendizaje> estandares = estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
-            competencia.getId(),
-            cicloId
-        );
-        List<Desempeno> desempenos = desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(grado.getId(), competencia.getId());
+        List<EstandarAprendizaje> estandares = competencias.stream()
+            .flatMap(competencia -> estandarAprendizajeRepository.findByCompetenciaIdAndCicloIdOrderByIdAsc(
+                competencia.getId(),
+                cicloId
+            ).stream())
+            .toList();
+        List<Desempeno> desempenos = competencias.stream()
+            .flatMap(competencia -> desempenoRepository.findByGradoIdAndCompetenciaIdOrderByIdAsc(
+                grado.getId(),
+                competencia.getId()
+            ).stream())
+            .toList();
 
-        return templateSessionGeneratorService.generate(request, grado, area, competencia, capacidades, estandares, desempenos);
+        return templateSessionGeneratorService.generate(request, grado, area, competencias, capacidades, estandares, desempenos);
     }
 
     private String requireCicloId(Grado grado) {

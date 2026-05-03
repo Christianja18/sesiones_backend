@@ -1,6 +1,7 @@
 package com.sesiones.sesiones_backend.service;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -24,14 +25,14 @@ public class TemplateSessionGeneratorService {
         GenerateSesionRequest request,
         Grado grado,
         Area area,
-        Competencia competencia,
+        List<Competencia> competencias,
         List<Capacidad> capacidades,
         List<EstandarAprendizaje> estandares,
         List<Desempeno> desempenos
     ) {
         String tema = request.getTema().trim();
         String contexto = request.getContexto().trim();
-        String competenciaTexto = competencia.getDescripcion().trim();
+        String competenciaTexto = joinCompetencias(competencias);
         String nivelTexto = grado.getNivel() == null ? "nivel no disponible" : grado.getNivel().getNombre();
         String cicloTexto = grado.getCiclo() == null ? "ciclo no disponible" : formatCiclo(grado);
 
@@ -40,7 +41,7 @@ public class TemplateSessionGeneratorService {
             .proposito(buildPurpose(nivelTexto, grado.getNombre(), cicloTexto, competenciaTexto, tema, contexto))
             .duracionMinutos(request.getDuracionMinutos())
             .generadoPorIa(false)
-            .competencias(List.of(new TextoReferenciaResponse(competencia.getId(), competenciaTexto)))
+            .competencias(toCompetenciaResponses(competencias))
             .capacidades(capacidades.stream().map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion())).toList())
             .estandares(estandares.stream().map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion())).toList())
             .desempenos(desempenos.stream().map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion())).toList())
@@ -49,6 +50,20 @@ public class TemplateSessionGeneratorService {
             .evidencias(buildEvidence(tema, estandares, desempenos))
             .instrumentoEvaluacion(buildInstrument(capacidades, estandares, desempenos))
             .build();
+    }
+
+    private String joinCompetencias(List<Competencia> competencias) {
+        return competencias.stream()
+            .map(Competencia::getDescripcion)
+            .map(String::trim)
+            .filter(text -> !text.isBlank())
+            .collect(Collectors.joining("; "));
+    }
+
+    private List<TextoReferenciaResponse> toCompetenciaResponses(List<Competencia> competencias) {
+        return competencias.stream()
+            .map(item -> new TextoReferenciaResponse(item.getId(), item.getDescripcion()))
+            .toList();
     }
 
     private String buildPurpose(String nivel, String grado, String ciclo, String competencia, String tema, String contexto) {

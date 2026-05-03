@@ -6,6 +6,8 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
+import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -35,6 +37,8 @@ import com.sesiones.sesiones_backend.util.enums.RolNombre;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
+    private static final String ROLE_PREFIX = "ROLE_";
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -103,6 +107,13 @@ public class SecurityConfig {
         DelegatingPasswordEncoder passwordEncoder = (DelegatingPasswordEncoder) PasswordEncoderFactories.createDelegatingPasswordEncoder();
         passwordEncoder.setDefaultPasswordEncoderForMatches(new BCryptPasswordEncoder());
         return passwordEncoder;
+    }
+
+    @Bean
+    public RoleHierarchy roleHierarchy() {
+        return RoleHierarchyImpl.fromHierarchy(
+            ROLE_PREFIX + RolNombre.ADMIN.name() + " > " + ROLE_PREFIX + RolNombre.PROFESOR.name()
+        );
     }
 
     @Bean
