@@ -1,6 +1,7 @@
 package com.sesiones.sesiones_backend.security;
 
 import java.io.IOException;
+import java.util.Optional;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -27,6 +28,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtService jwtService;
+    private final JwtCookieService jwtCookieService;
     private final DocenteRepository docenteRepository;
     private final AuthenticationEntryPoint authenticationEntryPoint;
 
@@ -36,14 +38,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         HttpServletResponse response,
         FilterChain filterChain
     ) throws ServletException, IOException {
-        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        if (authorizationHeader == null || !authorizationHeader.startsWith(BEARER_PREFIX)) {
+        Optional<String> token = resolveToken(request);
+        if (token.isEmpty()) {
             filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            JwtClaims claims = jwtService.validate(authorizationHeader.substring(BEARER_PREFIX.length()));
+            JwtClaims claims = jwtService.validate(token.get());
             Docente docente = docenteRepository.findByEmailIgnoreCase(claims.email())
                 .filter(found -> found.isActivo() && found.getId().equals(claims.userId()) && found.getRol() != null)
                 .orElseThrow(() -> new JwtTokenException("Docente del token no valido"));
@@ -62,5 +64,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private Optional<String> resolveToken(HttpServletRequest request) {
+        String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        if (authorizationHeader != null && authorizationHeader.startsWith(BEARER_PREFIX)) {
+            return Optional.of(authorizationHeader.substring(BEARER_PREFIX.length()));
+        }
+        return jwtCookieService.resolveToken(request);
     }
 }

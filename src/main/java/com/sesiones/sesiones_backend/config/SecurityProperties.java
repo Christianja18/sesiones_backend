@@ -14,6 +14,7 @@ public class SecurityProperties {
     private Jwt jwt = new Jwt();
     private Login login = new Login();
     private Cors cors = new Cors();
+    private Cookie cookie = new Cookie();
 
     @Data
     public static class Jwt {
@@ -30,5 +31,14 @@ public class SecurityProperties {
     @Data
     public static class Cors {
         private List<String> allowedOrigins = new ArrayList<>(List.of("http://localhost:4200"));
+    }
+
+    @Data
+    public static class Cookie {
+        private String name = "SESSION_TOKEN";
+        private String path = "/";
+        private String domain;
+        private boolean secure = false;
+        private String sameSite = "Lax";
     }
 }
